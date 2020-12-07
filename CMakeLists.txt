@@ -11,7 +11,9 @@ set(SRC_SHADER
     ${SRC_DIR}shaders/simple.vert
     ${SRC_DIR}shaders/simple.frag
     ${SRC_DIR}shaders/cubeMap.vert
-    ${SRC_DIR}shaders/cubeMap.frag)
+    ${SRC_DIR}shaders/cubeMap.frag
+    ${SRC_DIR}shaders/picking.vert
+    ${SRC_DIR}shaders/picking.frag)
 
 set(SRC_RENDER_UTILITIES
     ${SRC_DIR}RenderUtilities/BufferObject.h
@@ -21,23 +23,11 @@ set(SRC_RENDER_UTILITIES
     ${SRC_DIR}RenderUtilities/MeshObject.cpp
     ${SRC_DIR}RenderUtilities/MeshObject.h)
 
-set(SRC_ARAP
-    ${SRC_DIR}ARAP/vavImage.h
-    ${SRC_DIR}ARAP/vavImage.cpp
-    ${SRC_DIR}ARAP/TriangulationBase.h
-    ${SRC_DIR}ARAP/TriangulationCgal.h
-    ${SRC_DIR}ARAP/TriangulationCgal.cpp
-    ${SRC_DIR}ARAP/ArapInteractor_2.h
-    ${SRC_DIR}ARAP/ArapInteractor_2.cpp)
-
 include_directories(${INCLUDE_DIR})
 include_directories(${INCLUDE_DIR}eigen3/)
 include_directories(${INCLUDE_DIR}glad4.6/include/)
 include_directories(${INCLUDE_DIR}glm-0.9.8.5/glm/)
 include_directories(${INCLUDE_DIR}OpenMesh/)
-# include_directories(${INCLUDE_DIR}UMFPACK_Windows_lib/UMFPACK/Include/)
-# include_directories(${INCLUDE_DIR}UMFPACK_Windows_lib/AMD/Include/)
-# include_directories(${INCLUDE_DIR}UMFPACK_Windows_lib/UFconfig/)
 
 
 add_Definitions("-D_XKEYCHECK_H")
@@ -54,14 +44,11 @@ add_executable(MeshDeformation
 
     ${SRC_SHADER}
     ${SRC_RENDER_UTILITIES}
-    ${SRC_ARAP}
 
     ${INCLUDE_DIR}glad4.6/src/glad.c
 )
 source_group("shaders" FILES ${SRC_SHADER})
 source_group("RenderUtilities" FILES ${SRC_RENDER_UTILITIES})
-source_group("ARAP" FILES ${SRC_ARAP})
-
 
 add_library(Utilities 
     ${SRC_DIR}Utilities/ArcBallCam.h

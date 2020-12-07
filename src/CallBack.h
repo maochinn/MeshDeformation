@@ -33,9 +33,6 @@
 #include <Fl/Fl_File_Chooser.H>
 #include <Fl/math.h>
 #pragma warning(pop)
-
-#include "ARAP/TriangulationCgal.h"
-
 //***************************************************************************
 //
 // * any time something changes, you need to force a redraw
@@ -79,77 +76,25 @@ void idleCB(MyWindow* mw)
 //	mw->damageMe();
 //}
 
-void loadImageCB(Fl_Widget*, MyWindow* mw)
+void importCB(Fl_Widget*, MyWindow* mw)
 {
-	//const char* fname =
-	//	fl_file_chooser("Pick a OBJ File", "*.obj", "../MeshSimplification/Models/neptune_50k_hk_normalize.obj");
-	//if (fname) {
-	//	mw->myView->gl_mesh->Init(fname);
-	//	mw->damageMe();
-	//}
-
-	MyWindow::Mode_Display& Current_Display = mw->Current_Display;
-	vavImage* ImageEdge = mw->ImageEdge;
-
-	Current_Display.openImg = 1;
-	ImageEdge->ReadImage("gingerbread_man.bmp");
-	*ImageEdge = (ImageEdge->CannyEdge());
-
-	std::cout << "Load img :" << ImageEdge->GetHeight() << "*" << ImageEdge->GetWidth() << std::endl;
-
-	//hkoglPanelControl1->Invalidate();
-	mw->damageMe();
-}
-
-void triangulateCB(Fl_Widget*, MyWindow* mw)
-{
-	MyWindow::Mode_Display& Current_Display = mw->Current_Display;
-	vavImage* ImageEdge = mw->ImageEdge;
-	TriangulationCgal* Triangulate = mw->Triangulate;
-	TriMesh2D* test_1 = mw->test_1;
-	ShapeView* ShapeView_Object = mw->ShapeView_Object;
-	ArapInteractor* Arap = mw->Arap;
-
-	if (Current_Display.openImg)
-	{
-		Current_Display.triangulation = 1;
-		Current_Display.openImg = 0;
-		Triangulate = new TriangulationCgal;
-		Triangles Tris;
-		Vector2s meshPointset;
-		Vector2s ContourPoint = ImageEdge->GetContour();
-
-		for (int i = 0; i < ContourPoint.size(); i += 15)
-		{
-			Triangulate->AddPoint(ContourPoint[i][0], ContourPoint[i][1]);
-		}
-
-		Triangulate->DelaunayMesher2();
-		meshPointset = Triangulate->MeshPointSet();
-
-		for (int i = 0; i < meshPointset.size(); i++)
-		{
-			test_1->vertices.push_back(Point2D(meshPointset[i][0], meshPointset[i][1]));
-		}
-
-		Tris = Triangulate->GetTriangles();
-		std::cout << "Tris.size() :" << Tris.size() << std::endl;
-		Tri v;
-		for (int i = 0; i < Tris.size(); i++)
-		{
-			if (!ImageEdge->IsinsidePoint(Tris[Tris.size() - 1 - i].m_Points[0][0], Tris[Tris.size() - 1 - i].m_Points[0][1],
-				Tris[Tris.size() - 1 - i].m_Points[1][0], Tris[Tris.size() - 1 - i].m_Points[1][1],
-				Tris[Tris.size() - 1 - i].m_Points[2][0], Tris[Tris.size() - 1 - i].m_Points[2][1]))
-				continue;
-			for (int j = 0; j < 3; j++)
-			{
-				v[j] = Triangulate->getVertexID(Tris[Tris.size() - 1 - i].m_Points[j][0], Tris[Tris.size() - 1 - i].m_Points[j][1]);
-			}
-			test_1->tris.push_back(v);
-		}
-		Arap = new ArapInteractor(ShapeView_Object, *test_1);
-
+	const char* fname =
+		fl_file_chooser("Pick a txt File", "*.txt", "../MeshDeformation/Models/data/");
+	if (fname) {
+		mw->myView->gl_mesh->Init(fname);
+		mw->damageMe();
 	}
-	//hkoglPanelControl1->Invalidate();
+}
+
+void exportCB(Fl_Widget*, MyWindow* mw)
+{
+	mw->myView->gl_mesh->exportMesh();
 	mw->damageMe();
 }
+
+void resetCB(Fl_Widget*, MyWindow* mw)
+{
+	mw->myView->gl_mesh->resetMesh();
+	mw->damageMe();
+}
+

@@ -40,9 +40,6 @@
 
 // we need to know what is in the world to show
 //#include "Track.h"
-#include "ARAP/vavImage.h"
-#include "ARAP/ArapInteractor_2.h"
-#include "ARAP/TriangulationCgal.h"
 
 // other things we just deal with as pointers, to avoid circular references
 class MyView;
@@ -56,14 +53,12 @@ class MyView;
 class MyWindow : public Fl_Double_Window {
 public:
 	MyWindow(const int x = 50, const int y = 50);
-
 public:
 	// call this method when things change
 	void damageMe();
 
 	// simple helper function to set up a button
 	void togglify(Fl_Button*, int state = 0);
-
 public:
 	// keep track of the stuff in the world
 	//CTrack				m_Track;
@@ -73,36 +68,16 @@ public:
 
 	Fl_Group* widgets;	// all widgets, grouped for resizing ease
 
-	//// utility buttons
-	//Fl_Button* renderMeshButton;
-	//Fl_Button* renderSkeletonButton;
+	// utility buttons
+	Fl_Button* renderMeshButton;
+	Fl_Button* renderSkeletonButton;
 
-	//// which viewpoint are we drawing from
+	// which viewpoint are we drawing from
 	Fl_Button* world_cam;
 	Fl_Button* top_cam;
 
-	//Fl_Browser* simplification_browser;
+	Fl_Browser* simplification_browser;
+
 	//Fl_Value_Slider* simplification_slider;
-	//Fl_Value_Slider* degeneration_slider;
-	//Fl_Value_Slider* degeneration_simplify_slider;
-
 	//Fl_Value_Input* WL0;
-	//Fl_Value_Input* WH0;
-	//Fl_Value_Input* SL;
-
-	//Fl_Value_Input* SK_WA;
-	//Fl_Value_Input* SK_WB;
-
-	//
-	struct Mode_Display {
-		bool openImg;
-		bool triangulation;
-	};
-
-	Mode_Display Current_Display;
-	vavImage* ImageEdge = nullptr;
-	TriangulationCgal* Triangulate = nullptr;
-	TriMesh2D* test_1 = nullptr;
-	ShapeView* ShapeView_Object = nullptr;
-	ArapInteractor* Arap = nullptr;
 };
