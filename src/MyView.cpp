@@ -110,7 +110,12 @@ int MyView::handle(int event)
 			}
 			damage(1);
 			return 1;
-		};
+		}
+		else if (last_push == FL_RIGHT_MOUSE) {
+			doSelect(Fl::event_x(), Fl::event_y());
+			damage(1);
+			return 1;
+		}
 		break;
 
 		// Mouse button release event
@@ -121,6 +126,11 @@ int MyView::handle(int event)
 
 		// Mouse button drag event
 	case FL_DRAG:
+		if (Fl::event_button() == FL_RIGHT_MOUSE) {
+			doDrag(Fl::event_x(), Fl::event_y());
+			damage(1);
+			return 1;
+		}
 		break;
 
 		// in order to get keyboard events, we need to accept focus
@@ -262,7 +272,6 @@ void MyView::doPick(int mx, int my)
 	this->picking_shader->Use();
 	this->picking_tex.EnableWriting();
 	glViewport(0, 0, w(), h());
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// prepare for projection
@@ -284,18 +293,22 @@ void MyView::doPick(int mx, int my)
 
 	glUseProgram(0);
 
-	GLuint PrimID = this->picking_tex.ReadPixel(mx, h() - my - 1);
-	if (PrimID > 0) {
+	GLuint PrimID = this->picking_tex.ReadPixel(mx, h() - my - 1) - 1;
+	if (this->gl_mesh->validID(PrimID)) {
 		std::cout << PrimID << std::endl;
 
 		// these positions must be in range [-1, 1] (!!!), not [0, width] and [0, height]
 		float mouseX = mx / (w() * 0.5f) - 1.0f;
 		float mouseY = my / (h() * 0.5f) - 1.0f;
 
-		glm::mat4 proj, view;
+		GLfloat modelViewMatrix[16];
+		glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix);
 
-		glGetFloatv(GL_MODELVIEW_MATRIX, &view[0][0]);
-		glGetFloatv(GL_PROJECTION_MATRIX, &proj[0][0]);
+		GLfloat projectionViewMatrix[16];
+		glGetFloatv(GL_PROJECTION_MATRIX, projectionViewMatrix);
+
+		glm::mat4 proj = glm::make_mat4(projectionViewMatrix);
+		glm::mat4 view = glm::make_mat4(modelViewMatrix);
 
 		glm::mat4 invVP = glm::inverse(proj * view);
 		glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
@@ -303,13 +316,71 @@ void MyView::doPick(int mx, int my)
 
 		std::cout << worldPos.x << " " << worldPos.y << " " << worldPos.z << " " << worldPos.w << std::endl;
 
-		this->gl_mesh->select(PrimID, MyMesh::Point(worldPos.x, 0 , worldPos.z));
+		this->gl_mesh->select(PrimID, MyMesh::Point(worldPos.x, 0, worldPos.z));
 	}
 	else {
 		std::cout << "Nope" << std::endl;
 	}
 
 	is_picking = false;
+}
+
+void MyView::doSelect(int mx, int my)
+{
+	float mouseX = mx / (w() * 0.5f) - 1.0f;
+	float mouseY = my / (h() * 0.5f) - 1.0f;
+
+	glPushMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	setProjection();
+
+	GLfloat modelViewMatrix[16];
+	glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix);
+
+	GLfloat projectionViewMatrix[16];
+	glGetFloatv(GL_PROJECTION_MATRIX, projectionViewMatrix);
+
+	glm::mat4 proj = glm::make_mat4(projectionViewMatrix);
+	glm::mat4 view = glm::make_mat4(modelViewMatrix);
+
+	glm::mat4 invVP = glm::inverse(proj * view);
+	glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
+	glm::vec4 worldPos = invVP * screenPos;
+
+	this->gl_mesh->selectControlPoint(MyMesh::Point(worldPos.x, 0, worldPos.z));
+
+	glPopMatrix();
+}
+
+void MyView::doDrag(int mx, int my)
+{
+	float mouseX = mx / (w() * 0.5f) - 1.0f;
+	float mouseY = my / (h() * 0.5f) - 1.0f;
+
+	glPushMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	setProjection();
+
+	GLfloat modelViewMatrix[16];
+	glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix);
+
+	GLfloat projectionViewMatrix[16];
+	glGetFloatv(GL_PROJECTION_MATRIX, projectionViewMatrix);
+
+	glm::mat4 proj = glm::make_mat4(projectionViewMatrix);
+	glm::mat4 view = glm::make_mat4(modelViewMatrix);
+
+	glm::mat4 invVP = glm::inverse(proj * view);
+	glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
+	glm::vec4 worldPos = invVP * screenPos;
+
+	this->gl_mesh->dragControlPoint(MyMesh::Point(worldPos.x, 0, worldPos.z));
+
+	glPopMatrix();
 }
 
 //************************************************************************
@@ -332,11 +403,11 @@ setProjection()
 	else if (mw->top_cam->value()) {
 		float wi, he;
 		if (aspect >= 1) {
-			wi = 110;
+			wi = w() * 0.4f;
 			he = wi / aspect;
 		}
 		else {
-			he = 110;
+			he = h() * 0.4f;
 			wi = he * aspect;
 		}
 

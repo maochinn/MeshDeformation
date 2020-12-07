@@ -63,7 +63,10 @@ public:
 	virtual void draw();
 	virtual void resize(int, int, int, int);
 
-	void doPick(int,int);
+	void doPick(int, int);
+	void doSelect(int, int);
+	void doDrag(int, int);
+
 	// setup the projection - assuming that the projection stack has been
 	// cleared for you
 	void setProjection();
@@ -75,8 +78,6 @@ public:
 	void setUBO();
 public:
 	ArcBallCam		arcball;			// keep an ArcBall for the UI
-	int				selectedCube;  // simple - just remember which cube is selected
-
 	MyWindow* mw;				// The parent of this display window
 
 	bool do_pick = false;
