@@ -262,6 +262,7 @@ void MyView::doPick(int mx, int my)
 	this->picking_shader->Use();
 	this->picking_tex.EnableWriting();
 	glViewport(0, 0, w(), h());
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// prepare for projection
@@ -283,22 +284,18 @@ void MyView::doPick(int mx, int my)
 
 	glUseProgram(0);
 
-	float PrimID = this->picking_tex.ReadPixel(mx, h() - my - 1);
-	if (int(PrimID) > 0) {
+	GLuint PrimID = this->picking_tex.ReadPixel(mx, h() - my - 1);
+	if (PrimID > 0) {
 		std::cout << PrimID << std::endl;
 
 		// these positions must be in range [-1, 1] (!!!), not [0, width] and [0, height]
 		float mouseX = mx / (w() * 0.5f) - 1.0f;
 		float mouseY = my / (h() * 0.5f) - 1.0f;
 
-		GLfloat modelViewMatrix[16];
-		glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix);
+		glm::mat4 proj, view;
 
-		GLfloat projectionViewMatrix[16];
-		glGetFloatv(GL_PROJECTION_MATRIX, projectionViewMatrix);
-
-		glm::mat4 proj = glm::make_mat4(projectionViewMatrix);
-		glm::mat4 view = glm::make_mat4(modelViewMatrix);
+		glGetFloatv(GL_MODELVIEW_MATRIX, &view[0][0]);
+		glGetFloatv(GL_PROJECTION_MATRIX, &proj[0][0]);
 
 		glm::mat4 invVP = glm::inverse(proj * view);
 		glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
@@ -306,7 +303,7 @@ void MyView::doPick(int mx, int my)
 
 		std::cout << worldPos.x << " " << worldPos.y << " " << worldPos.z << " " << worldPos.w << std::endl;
 
-		this->gl_mesh->select(int(PrimID), MyMesh::Point(worldPos.x, 0 , worldPos.z));
+		this->gl_mesh->select(PrimID, MyMesh::Point(worldPos.x, 0 , worldPos.z));
 	}
 	else {
 		std::cout << "Nope" << std::endl;
@@ -373,93 +370,4 @@ void MyView::setUBO()
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), &view_matrix[0][0]);
 	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), sizeof(glm::mat4), &glm::inverse(view_matrix)[0][0]);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-}
-
-bool PickingTexture::Init(unsigned int WindowWidth, unsigned int WindowHeight)
-{
-	// Create the FBO
-	glGenFramebuffers(1, &m_fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-
-	// Create the texture object for the primitive information buffer
-	glGenTextures(1, &m_pickingTexture);
-	glBindTexture(GL_TEXTURE_2D, m_pickingTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, WindowWidth, WindowHeight,
-		0, GL_RGB, GL_FLOAT, NULL);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-		m_pickingTexture, 0);
-
-	// Disable reading to avoid problems with older GPUs
-	glReadBuffer(GL_NONE);
-
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
-
-	// Verify that the FBO is correct
-	GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
-	if (Status != GL_FRAMEBUFFER_COMPLETE) {
-		printf("FB error, status: 0x%x\n", Status);
-		return false;
-	}
-
-	// Restore the default framebuffer
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	return true;
-}
-
-bool PickingTexture::Resize(unsigned int WindowWidth, unsigned int WindowHeight)
-{
-	// Create the FBO
-	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-
-	// Create the texture object for the primitive information buffer
-	glBindTexture(GL_TEXTURE_2D, m_pickingTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, WindowWidth, WindowHeight,
-		0, GL_RED, GL_FLOAT, NULL);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-		m_pickingTexture, 0);
-
-	// Disable reading to avoid problems with older GPUs
-	glReadBuffer(GL_NONE);
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
-
-	// Verify that the FBO is correct
-	GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
-	if (Status != GL_FRAMEBUFFER_COMPLETE) {
-		printf("FB error, status: 0x%x\n", Status);
-		return false;
-	}
-
-	// Restore the default framebuffer
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	return true;
-}
-
-void PickingTexture::EnableWriting()
-{
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
-}
-
-void PickingTexture::DisableWriting()
-{
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-}
-
-float PickingTexture::ReadPixel(unsigned int x, unsigned int y)
-{
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo);
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-
-	float Pixel;
-	glReadPixels(x, y, 1, 1, GL_RED, GL_FLOAT, &Pixel);
-
-	glReadBuffer(GL_NONE);
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-
-	return Pixel;
 }

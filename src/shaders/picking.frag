@@ -1,6 +1,6 @@
-out float FragColor;
+out uint FragColor;
 
 void main()
 {
-    FragColor = float(gl_PrimitiveID + 1);
+    FragColor = gl_PrimitiveID + 1;
 }

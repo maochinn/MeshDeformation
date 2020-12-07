@@ -21,7 +21,8 @@ set(SRC_RENDER_UTILITIES
     ${SRC_DIR}RenderUtilities/Texture.h
     ${SRC_DIR}RenderUtilities/CubeMap.h
     ${SRC_DIR}RenderUtilities/MeshObject.cpp
-    ${SRC_DIR}RenderUtilities/MeshObject.h)
+    ${SRC_DIR}RenderUtilities/MeshObject.h
+    ${SRC_DIR}RenderUtilities/PickingTexture.h)
 
 include_directories(${INCLUDE_DIR})
 include_directories(${INCLUDE_DIR}eigen3/)

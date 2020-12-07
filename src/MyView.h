@@ -48,26 +48,9 @@ class MyWindow;
 #include "RenderUtilities/Texture.h"
 #include "RenderUtilities/CubeMap.h"
 #include "RenderUtilities/MeshObject.h"
+#include "RenderUtilities/PickingTexture.h"
 
 class GLMesh;
-
-class PickingTexture
-{
-public:
-	bool Init(unsigned int WindowWidth, unsigned int WindowHeight);
-	bool Resize(unsigned int WindowWidth, unsigned int WindowHeight);
-
-	void EnableWriting();
-
-	void DisableWriting();
-
-	float ReadPixel(unsigned int x, unsigned int y);
-
-private:
-	GLuint m_fbo;
-	GLuint m_pickingTexture;
-};
-
 
 class MyView : public Fl_Gl_Window
 {
