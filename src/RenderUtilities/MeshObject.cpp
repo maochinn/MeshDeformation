@@ -136,7 +136,7 @@ void MyMesh::preComputeG()
 		}
 
 		this->property(prop_G, e_it) = (G.transpose() * G).inverse() * G.transpose();
-		this->property(prop_W, e_it) = std::max(std::min(Weight, 1e8), 1.0);
+		this->property(prop_W, e_it) = Weight;// std::max(std::min(Weight, 1e15), 1e-15);
 	}
 }
 
@@ -269,7 +269,8 @@ void MyMesh::select(unsigned int face_ID, MyMesh::Point p)
 	cp.w[0] = i_area * a0;
 	cp.w[1] = i_area * a1;
 	cp.w[2] = i_area * a2;
-	cp.c = cp.w[0] * p0 + cp.w[1] * p1 + cp.w[2] * p2;
+	cp.o = cp.w[0] * p0 + cp.w[1] * p1 + cp.w[2] * p2;
+	cp.c = cp.o;
 	//cp.c = MyMesh::Point(0,0,0);
 
 	AddControlPoint(cp);
@@ -338,15 +339,21 @@ unsigned int MyMesh::FindControlPoint(MyMesh::Point, double)
 	return 0;
 }
 
-void MyMesh::Compute()
+void MyMesh::Compute(unsigned int id)
 {
+	offset = MyMesh::Point(0, 0, 0);
+	for (int i = 0; i < controlPoints.size(); i++) {
+			offset += controlPoints[i].c - controlPoints[i].o;
+	}
+	offset /= (controlPoints.size());
+
 	Step1();
 	Step2();
 
 	int N(n_vertices());
 	for (int i = 0; i < N; i++)
 	{
-		deformed_vertices[i] = MyMesh::Point(V2x(i), 0, V2y(i));
+		deformed_vertices[i] = MyMesh::Point(V2x(i) + offset[0], 0, V2y(i) + offset[2]);
 	}
 }
 
@@ -358,8 +365,8 @@ void MyMesh::Step1()
 
 	Eigen::MatrixXd b1 = Eigen::MatrixXd::Zero(N_E * 2 + N_C * 2, 1);
 	for (int i = 0; i < controlPoints.size(); i++) {
-		b1(N_E * 2 + i * 2, 0) = controlPoints[i].c[0] * W;
-		b1(N_E * 2 + i * 2 + 1, 0) = controlPoints[i].c[2] * W;
+		b1(N_E * 2 + i * 2, 0) = (controlPoints[i].c[0] - offset[0]) * W;
+		b1(N_E * 2 + i * 2 + 1, 0) = (controlPoints[i].c[2] - offset[2]) * W;
 	}
 
 	Eigen::MatrixXd A1(N_E * 2 + N_C * 2, N_V * 2);
@@ -452,8 +459,8 @@ void MyMesh::Step2()
 	}
 
 	for (int i = 0; i < controlPoints.size(); i++) {
-		b2x(N_E + i, 0) = controlPoints[i].c[0] * W;
-		b2y(N_E + i, 0) = controlPoints[i].c[2] * W;
+		b2x(N_E + i, 0) = (controlPoints[i].c[0] - offset[0]) * W;
+		b2y(N_E + i, 0) = (controlPoints[i].c[2] - offset[2]) * W;
 	}
 
 	Eigen::MatrixXd A2(N_E + N_C, N_V);
@@ -573,7 +580,7 @@ void GLMesh::dragControlPoint(MyMesh::Point p)
 
 	this->mesh.controlPoints[select_id].c = p;
 
-	this->mesh.Compute();
+	this->mesh.Compute(select_id);
 
 	std::vector<MyMesh::Normal> normals;
 	std::vector<unsigned int> indices;

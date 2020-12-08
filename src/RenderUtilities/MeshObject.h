@@ -28,6 +28,7 @@ public:
 	struct ControlPoint {
 		MyMesh::FaceHandle fh;
 		double w[3];
+		MyMesh::Point o;
 		MyMesh::Point c;
 	};
 
@@ -40,11 +41,11 @@ public:
 
 	unsigned int FindControlPoint(MyMesh::Point, double);
 
-	void Compute();
+	void Compute(unsigned int);
 	void Step1();
 	void Step2();
 
-	double W = 100;
+	double W = 1000;
 
 	std::vector<ControlPoint> controlPoints;
 	std::vector<MyMesh::Point> deformed_vertices;
@@ -57,6 +58,8 @@ private:
 	std::vector<Eigen::Triplet<double>> C2_triplets;
 
 	Eigen::VectorXd V1, V2x, V2y;
+
+	MyMesh::Point offset;
 
 	OpenMesh::EPropHandleT<Eigen::MatrixXd> prop_G;
 	OpenMesh::EPropHandleT<double> prop_W;
