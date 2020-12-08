@@ -240,6 +240,8 @@ void MyView::draw()
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.941f, .25f, .25f)[0]);
 	this->gl_mesh->renderMesh();
 	glDisable(GL_DEPTH_TEST);
+	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.25f, .941f, .25f)[0]);
+	this->gl_mesh->renderSelectedMesh();
 
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.26f, .181f, .172f)[0]);
 	glLineWidth(1.38f);
@@ -301,14 +303,9 @@ void MyView::doPick(int mx, int my)
 		float mouseX = mx / (w() * 0.5f) - 1.0f;
 		float mouseY = my / (h() * 0.5f) - 1.0f;
 
-		GLfloat modelViewMatrix[16];
-		glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix);
-
-		GLfloat projectionViewMatrix[16];
-		glGetFloatv(GL_PROJECTION_MATRIX, projectionViewMatrix);
-
-		glm::mat4 proj = glm::make_mat4(projectionViewMatrix);
-		glm::mat4 view = glm::make_mat4(modelViewMatrix);
+		glm::mat4 proj, view;
+		glGetFloatv(GL_MODELVIEW_MATRIX, &view[0][0]);
+		glGetFloatv(GL_PROJECTION_MATRIX, &proj[0][0]);
 
 		glm::mat4 invVP = glm::inverse(proj * view);
 		glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
@@ -316,7 +313,7 @@ void MyView::doPick(int mx, int my)
 
 		std::cout << worldPos.x << " " << worldPos.y << " " << worldPos.z << " " << worldPos.w << std::endl;
 
-		this->gl_mesh->select(PrimID, MyMesh::Point(worldPos.x, 0, worldPos.z));
+		this->gl_mesh->select(PrimID, MyMesh::Point(worldPos.x, 0 , worldPos.z));
 	}
 	else {
 		std::cout << "Nope" << std::endl;
@@ -336,14 +333,9 @@ void MyView::doSelect(int mx, int my)
 	glLoadIdentity();
 	setProjection();
 
-	GLfloat modelViewMatrix[16];
-	glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix);
-
-	GLfloat projectionViewMatrix[16];
-	glGetFloatv(GL_PROJECTION_MATRIX, projectionViewMatrix);
-
-	glm::mat4 proj = glm::make_mat4(projectionViewMatrix);
-	glm::mat4 view = glm::make_mat4(modelViewMatrix);
+	glm::mat4 proj, view;
+	glGetFloatv(GL_MODELVIEW_MATRIX, &view[0][0]);
+	glGetFloatv(GL_PROJECTION_MATRIX, &proj[0][0]);
 
 	glm::mat4 invVP = glm::inverse(proj * view);
 	glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
@@ -365,14 +357,9 @@ void MyView::doDrag(int mx, int my)
 	glLoadIdentity();
 	setProjection();
 
-	GLfloat modelViewMatrix[16];
-	glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix);
-
-	GLfloat projectionViewMatrix[16];
-	glGetFloatv(GL_PROJECTION_MATRIX, projectionViewMatrix);
-
-	glm::mat4 proj = glm::make_mat4(projectionViewMatrix);
-	glm::mat4 view = glm::make_mat4(modelViewMatrix);
+	glm::mat4 proj, view;
+	glGetFloatv(GL_MODELVIEW_MATRIX, &view[0][0]);
+	glGetFloatv(GL_PROJECTION_MATRIX, &proj[0][0]);
 
 	glm::mat4 invVP = glm::inverse(proj * view);
 	glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);

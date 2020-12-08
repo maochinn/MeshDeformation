@@ -530,6 +530,23 @@ void GLMesh::renderMesh()
 		glBindVertexArray(0);
 	}
 }
+void GLMesh::renderSelectedMesh()
+{
+	if (selected_faces.size() > 0)
+	{
+		std::vector<unsigned int*> offsets(selected_faces.size());
+		for (int i = 0; i < offsets.size(); ++i)
+		{
+			offsets[i] = (GLuint*)(selected_faces[i] * 3 * sizeof(GLuint));
+		}
+
+		std::vector<int> count(selected_faces.size(), 3);
+
+		glBindVertexArray(this->vao.vao);
+		glMultiDrawElements(GL_TRIANGLES, &count[0], GL_UNSIGNED_INT, (const GLvoid**)&offsets[0], selected_faces.size());
+		glBindVertexArray(0);
+	}
+}
 void GLMesh::renderControlPoints()
 {
 	//glEnable(GL_PROGRAM_POINT_SIZE);
@@ -555,6 +572,7 @@ void GLMesh::renderControlPoints()
 void GLMesh::select(unsigned int tri_ID, MyMesh::Point p)
 {
 	this->mesh.select(tri_ID, p);
+	this->AddSelectedFace(tri_ID);
 }
 
 void GLMesh::selectControlPoint(MyMesh::Point p)
@@ -839,6 +857,16 @@ bool GLMesh::exportMesh()
 		return false;
 	}
 	return true;
+}
+bool GLMesh::AddSelectedFace(unsigned int faceID)
+{
+	if (std::find(selected_faces.begin(), selected_faces.end(), faceID) == selected_faces.end() &&
+		faceID >= 0 && faceID < mesh.n_faces())
+	{
+		selected_faces.push_back(faceID);
+		return true;
+	}
+	return false;
 }
 
 #pragma endregion
