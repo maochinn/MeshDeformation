@@ -18,10 +18,7 @@ public:
 	MyMesh();
 	~MyMesh();
 
-	bool reloadMesh(std::vector<MyMesh::Point>, std::vector<unsigned int>);
-
-	int FindVertex(MyMesh::Point pointToFind);
-	void ClearMesh();
+	void Initialization();
 
 	void Registration();
 	void preComputeG();
@@ -47,11 +44,13 @@ public:
 	void Step1();
 	void Step2();
 
-	double W = 1000.0;
+	double W = 100;
 
 	std::vector<ControlPoint> controlPoints;
+	std::vector<MyMesh::Point> deformed_vertices;
 
 private:
+
 	Eigen::SparseMatrix<double> L1, L2, LL1, LL2;
 	Eigen::SparseMatrix<double> C1, C2, CC1, CC2;
 	std::vector<Eigen::Triplet<double>> C1_triplets;
@@ -60,8 +59,8 @@ private:
 	Eigen::VectorXd V1, V2x, V2y;
 
 	OpenMesh::EPropHandleT<Eigen::MatrixXd> prop_G;
-	//OpenMesh::EPropHandleT<float> prop_e;
-	//OpenMesh::VPropHandleT<float> prop_sk_ve;
+	OpenMesh::EPropHandleT<double> prop_W;
+
 };
 
 class GLMesh
@@ -81,6 +80,13 @@ public:
 	void renderControlPoints();
 
 	void select(unsigned int, MyMesh::Point);
+
+	unsigned int select_id = -1;
+	void selectControlPoint(MyMesh::Point);
+
+	void dragControlPoint(MyMesh::Point);
+
+	bool validID(unsigned int);
 private:
 	MyMesh mesh;
 	VAO vao;
