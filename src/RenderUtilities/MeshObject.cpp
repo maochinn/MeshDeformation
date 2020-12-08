@@ -16,7 +16,6 @@
 #include <CGAL/Delaunay_mesh_face_base_2.h>
 #include <CGAL/Delaunay_mesh_vertex_base_2.h>
 #include <CGAL/Delaunay_mesh_size_criteria_2.h>
-#include <CGAL/lloyd_optimize_mesh_2.h>
 
 #include "MeshObject.h"
 
@@ -292,11 +291,12 @@ void MyMesh::AddControlPoint(ControlPoint cp)
 	int row = controlPoints.size();
 
 	C1_triplets.push_back(Eigen::Triplet<double>(row * 2, c0 * 2, cp.w[0] * W));
-	C1_triplets.push_back(Eigen::Triplet<double>(row * 2, c1 * 2, cp.w[1] * W));
-	C1_triplets.push_back(Eigen::Triplet<double>(row * 2, c2 * 2, cp.w[2] * W));
-
 	C1_triplets.push_back(Eigen::Triplet<double>(row * 2 + 1, c0 * 2 + 1, cp.w[0] * W));
+
+	C1_triplets.push_back(Eigen::Triplet<double>(row * 2, c1 * 2, cp.w[1] * W));
 	C1_triplets.push_back(Eigen::Triplet<double>(row * 2 + 1, c1 * 2 + 1, cp.w[1] * W));
+
+	C1_triplets.push_back(Eigen::Triplet<double>(row * 2, c2 * 2, cp.w[2] * W));
 	C1_triplets.push_back(Eigen::Triplet<double>(row * 2 + 1, c2 * 2 + 1, cp.w[2] * W));
 
 	C2_triplets.push_back(Eigen::Triplet<double>(row, c0, cp.w[0] * W));
@@ -310,12 +310,27 @@ void MyMesh::AddControlPoint(ControlPoint cp)
 
 void MyMesh::RemoveControlPoint(unsigned int idx)
 {
+	int n_controlPoints = controlPoints.size();
+	int s_id = (n_controlPoints - 1);
+
 	ControlPoint& cp = controlPoints[idx];
 
-	C1_triplets.erase(C1_triplets.begin() + idx * 6, C1_triplets.begin() + idx * 6 + 6);
-	C2_triplets.erase(C2_triplets.begin() + idx * 3, C2_triplets.begin() + idx * 3 + 3);
+	for (int i = 0; i < 3; i++) {
+		int c1_idx = idx * 6 + i * 2;
+		int c1_sidx = s_id * 6 + i * 2;
+		C1_triplets[c1_idx] = Eigen::Triplet<double>(C1_triplets[c1_idx].row(), C1_triplets[c1_sidx].col(), C1_triplets[c1_sidx].value());
+		C1_triplets[c1_idx+1]= Eigen::Triplet<double>(C1_triplets[c1_idx+1].row(), C1_triplets[c1_sidx+1].col(), C1_triplets[c1_sidx].value());
 
-	controlPoints.erase(controlPoints.begin() + idx);
+		int c2_idx = idx * 3 + i;
+		int c2_sidx = s_id * 3 + i;
+		C2_triplets[c2_idx] = Eigen::Triplet<double>(C2_triplets[c2_idx].row(), C2_triplets[c2_sidx].col(), C2_triplets[c2_sidx].value());
+	}
+
+	C1_triplets.erase(C1_triplets.end() - 6, C1_triplets.end());
+	C2_triplets.erase(C2_triplets.end() - 3, C2_triplets.end());
+
+	controlPoints[idx] = controlPoints[s_id];
+	controlPoints.erase(controlPoints.end() - 1);
 
 	Compilation();
 }
@@ -370,7 +385,6 @@ void MyMesh::Step1()
 	}
 
 	Eigen::MatrixXd A1(N_E * 2 + N_C * 2, N_V * 2);
-	//Eigen::SparseMatrix<double, Eigen::RowMajor> A1(N_E * 2 + N_C * 2, N_V * 2);
 	A1.topRows(N_E * 2) = L1;
 	A1.bottomRows(N_C * 2) = C1;
 
@@ -575,6 +589,14 @@ void GLMesh::select(unsigned int tri_ID, MyMesh::Point p)
 	this->AddSelectedFace(tri_ID);
 }
 
+void GLMesh::remove_selected()
+{
+	if (validID(select_id)) {
+		mesh.RemoveControlPoint(select_id);
+	}
+	select_id = -1;
+}
+
 void GLMesh::selectControlPoint(MyMesh::Point p)
 {
 	select_id = -1;
@@ -641,7 +663,6 @@ typedef CGAL::Delaunay_mesh_face_base_2<CGAL_K>                       CGAL_Fb;
 typedef CGAL::Triangulation_data_structure_2<CGAL_Vb, CGAL_Fb>        CGAL_Tds;
 typedef CGAL::Constrained_Delaunay_triangulation_2<CGAL_K, CGAL_Tds>  CGAL_CDT;
 typedef CGAL::Delaunay_mesh_size_criteria_2<CGAL_CDT>                 CGAL_Criteria;
-typedef CGAL::Delaunay_mesher_2<CGAL_CDT, CGAL_Criteria>              CGAL_Mesher;
 
 typedef CGAL_CDT::Vertex_handle CGAL_Vertex_handle;
 typedef CGAL_CDT::Point CGAL_Point;
@@ -718,19 +739,11 @@ bool GLMesh::Load2DModel(std::string fileName)
 
 	std::cout << "Number of vertices: " << cdt.number_of_vertices() << std::endl;
 
+	
+
 	std::cout << "Meshing..." << std::endl;
-	CGAL_Mesher mesher(cdt);
-	mesher.set_criteria(CGAL_Criteria(0.125, 0.125));
-	mesher.refine_mesh();
-
-	std::cout << "Number of vertices: " << cdt.number_of_vertices() << std::endl;
-	std::cout << "Run Lloyd optimization...";
-
-	CGAL::lloyd_optimize_mesh_2(cdt, CGAL::parameters::max_iteration_number = 10);
-
-	std::cout << "Meshing the domain..." << std::endl;
 	CGAL::refine_Delaunay_mesh_2(cdt, list_of_seeds.begin(), list_of_seeds.end(),
-		CGAL_Criteria());
+		CGAL_Criteria(0.125, 0.12));
 
 	std::cout << " done." << std::endl;
 

@@ -145,8 +145,8 @@ int MyView::handle(int event)
 	case FL_KEYBOARD:
 		int k = Fl::event_key();
 		int ks = Fl::event_state();
-		if (k == 'p') {
-
+		if (k == 'd') {
+			this->gl_mesh->remove_selected();
 			return 1;
 		};
 		break;

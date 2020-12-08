@@ -83,6 +83,7 @@ public:
 	void renderControlPoints();
 
 	void select(unsigned int, MyMesh::Point);
+	void remove_selected();
 
 	unsigned int select_id = -1;
 	void selectControlPoint(MyMesh::Point);
