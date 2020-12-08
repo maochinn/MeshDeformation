@@ -230,6 +230,8 @@ void MyView::draw()
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.941f, .25f, .25f)[0]);
 	this->gl_mesh->renderMesh();
 	glDisable(GL_DEPTH_TEST);
+	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.25f, .941f, .25f)[0]);
+	this->gl_mesh->renderSelectedMesh();
 
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.26f, .181f, .172f)[0]);
 	glLineWidth(1.38f);
@@ -303,7 +305,7 @@ void MyView::doPick(int mx, int my)
 
 		std::cout << worldPos.x << " " << worldPos.y << " " << worldPos.z << " " << worldPos.w << std::endl;
 
-		this->gl_mesh->select(PrimID, MyMesh::Point(worldPos.x, 0 , worldPos.z));
+		this->gl_mesh->select(PrimID-1, MyMesh::Point(worldPos.x, 0 , worldPos.z));
 	}
 	else {
 		std::cout << "Nope" << std::endl;

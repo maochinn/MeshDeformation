@@ -76,6 +76,7 @@ public:
 	bool exportMesh();
 
 	void renderMesh();
+	void renderSelectedMesh();
 
 	void renderControlPoints();
 
@@ -83,6 +84,8 @@ public:
 private:
 	MyMesh mesh;
 	VAO vao;
+
+	std::vector<unsigned int> selected_faces;
 
 	bool LoadModel(std::string fileName);
 	bool Load2DImage(std::string fileName);
@@ -93,5 +96,7 @@ private:
 		std::vector<MyMesh::Normal>& normals,
 		std::vector<unsigned int>& indices);
 	void LoadTexCoordToShader();
+
+	bool AddSelectedFace(unsigned int faceID);
 };
 
