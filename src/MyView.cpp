@@ -303,14 +303,9 @@ void MyView::doPick(int mx, int my)
 		float mouseX = mx / (w() * 0.5f) - 1.0f;
 		float mouseY = my / (h() * 0.5f) - 1.0f;
 
-		GLfloat modelViewMatrix[16];
-		glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix);
-
-		GLfloat projectionViewMatrix[16];
-		glGetFloatv(GL_PROJECTION_MATRIX, projectionViewMatrix);
-
-		glm::mat4 proj = glm::make_mat4(projectionViewMatrix);
-		glm::mat4 view = glm::make_mat4(modelViewMatrix);
+		glm::mat4 proj, view;
+		glGetFloatv(GL_MODELVIEW_MATRIX, &view[0][0]);
+		glGetFloatv(GL_PROJECTION_MATRIX, &proj[0][0]);
 
 		glm::mat4 invVP = glm::inverse(proj * view);
 		glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
@@ -338,14 +333,9 @@ void MyView::doSelect(int mx, int my)
 	glLoadIdentity();
 	setProjection();
 
-	GLfloat modelViewMatrix[16];
-	glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix);
-
-	GLfloat projectionViewMatrix[16];
-	glGetFloatv(GL_PROJECTION_MATRIX, projectionViewMatrix);
-
-	glm::mat4 proj = glm::make_mat4(projectionViewMatrix);
-	glm::mat4 view = glm::make_mat4(modelViewMatrix);
+	glm::mat4 proj, view;
+	glGetFloatv(GL_MODELVIEW_MATRIX, &view[0][0]);
+	glGetFloatv(GL_PROJECTION_MATRIX, &proj[0][0]);
 
 	glm::mat4 invVP = glm::inverse(proj * view);
 	glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
@@ -367,14 +357,9 @@ void MyView::doDrag(int mx, int my)
 	glLoadIdentity();
 	setProjection();
 
-	GLfloat modelViewMatrix[16];
-	glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix);
-
-	GLfloat projectionViewMatrix[16];
-	glGetFloatv(GL_PROJECTION_MATRIX, projectionViewMatrix);
-
-	glm::mat4 proj = glm::make_mat4(projectionViewMatrix);
-	glm::mat4 view = glm::make_mat4(modelViewMatrix);
+	glm::mat4 proj, view;
+	glGetFloatv(GL_MODELVIEW_MATRIX, &view[0][0]);
+	glGetFloatv(GL_PROJECTION_MATRIX, &proj[0][0]);
 
 	glm::mat4 invVP = glm::inverse(proj * view);
 	glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
