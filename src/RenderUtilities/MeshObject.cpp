@@ -1,8 +1,9 @@
 #include <map>
 #include <set>
 #include <algorithm>
-#include "opencv2/highgui.hpp"
-#include "opencv2/core.hpp"
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 //#include "../CDT/include/CDT.h"
 //#include "../CDT/extras/VerifyTopology.h"
@@ -20,6 +21,16 @@
 #include "MeshObject.h"
 
 #include <fstream>
+
+typedef CGAL::Exact_predicates_inexact_constructions_kernel           CGAL_K;
+typedef CGAL::Delaunay_mesh_vertex_base_2<CGAL_K>                     CGAL_Vb;
+typedef CGAL::Delaunay_mesh_face_base_2<CGAL_K>                       CGAL_Fb;
+typedef CGAL::Triangulation_data_structure_2<CGAL_Vb, CGAL_Fb>        CGAL_Tds;
+typedef CGAL::Constrained_Delaunay_triangulation_2<CGAL_K, CGAL_Tds>  CGAL_CDT;
+typedef CGAL::Delaunay_mesh_size_criteria_2<CGAL_CDT>                 CGAL_Criteria;
+
+typedef CGAL_CDT::Vertex_handle CGAL_Vertex_handle;
+typedef CGAL_CDT::Point CGAL_Point;
 
 struct OpenMesh::VertexHandle const OpenMesh::PolyConnectivity::InvalidVertexHandle;
 
@@ -356,12 +367,12 @@ unsigned int MyMesh::FindControlPoint(MyMesh::Point, double)
 
 void MyMesh::Compute(unsigned int id)
 {
-	offset = MyMesh::Point(0, 0, 0);
+	/*offset = MyMesh::Point(0, 0, 0);
 	for (int i = 0; i < controlPoints.size(); i++) {
-			offset += controlPoints[i].c - controlPoints[i].o;
+		offset += controlPoints[i].c - controlPoints[i].o;
 	}
-	offset /= (controlPoints.size());
-
+	offset /= (controlPoints.size());*/
+	//offset = controlPoints[0].c - controlPoints[0].o;
 	Step1();
 	Step2();
 
@@ -378,13 +389,14 @@ void MyMesh::Step1()
 	const int N_E(n_edges());
 	const int N_C(controlPoints.size());
 
-	Eigen::MatrixXd b1 = Eigen::MatrixXd::Zero(N_E * 2 + N_C * 2, 1);
+	Eigen::SparseMatrix<double> b1(N_E * 2 + N_C * 2, 1);
+	b1.reserve(Eigen::VectorXi::Constant(1, N_C * 2));
 	for (int i = 0; i < controlPoints.size(); i++) {
-		b1(N_E * 2 + i * 2, 0) = (controlPoints[i].c[0] - offset[0]) * W;
-		b1(N_E * 2 + i * 2 + 1, 0) = (controlPoints[i].c[2] - offset[2]) * W;
+		b1.insert(N_E * 2 + i * 2, 0) = (controlPoints[i].c[0] - offset[0]) * W;
+		b1.insert(N_E * 2 + i * 2 + 1, 0) = (controlPoints[i].c[2] - offset[2]) * W;
 	}
 
-	Eigen::MatrixXd A1(N_E * 2 + N_C * 2, N_V * 2);
+	Eigen::SparseMatrix<double, Eigen::RowMajor> A1(N_E * 2 + N_C * 2, N_V * 2);
 	A1.topRows(N_E * 2) = L1;
 	A1.bottomRows(N_C * 2) = C1;
 
@@ -398,9 +410,9 @@ void MyMesh::Step1()
 void MyMesh::Step2()
 {
 	const int N_V(n_vertices());
-	/*V2x = Eigen::VectorXd(N_V);
+	V2x = Eigen::VectorXd(N_V);
 	V2y = Eigen::VectorXd(N_V);
-	for (int i = 0; i < N_V; i++) {
+	/*for (int i = 0; i < N_V; i++) {
 		V2x(i) = V1(i * 2);
 		V2y(i) = V1(i * 2 + 1);
 	}
@@ -477,7 +489,7 @@ void MyMesh::Step2()
 		b2y(N_E + i, 0) = (controlPoints[i].c[2] - offset[2]) * W;
 	}
 
-	Eigen::MatrixXd A2(N_E + N_C, N_V);
+	Eigen::SparseMatrix<double, Eigen::RowMajor> A2(N_E + N_C, N_V);
 	A2.topRows(N_E) = L2;
 	A2.bottomRows(N_C) = C2;
 
@@ -504,7 +516,7 @@ GLMesh::~GLMesh()
 
 bool GLMesh::Init(std::string fileName)
 {
-	if (Load2DModel(fileName))
+	if (Load2DImage(fileName))
 	{
 		glGenVertexArrays(1, &this->vao.vao);
 		glBindVertexArray(this->vao.vao);
@@ -650,23 +662,129 @@ bool GLMesh::LoadModel(std::string fileName)
 	return false;
 }
 
+typedef CGAL::Delaunay_mesher_2<CGAL_CDT, CGAL_Criteria> Mesher;
 bool GLMesh::Load2DImage(std::string fileName)
 {
-	cv::Mat img = cv::imread(fileName);
-	return false;
+	cv::Mat img = cv::imread(fileName, 0);
+
+	//cv::Canny(img, edges, 100, 210);
+	//floodFill(edges, cv::Point2i(edges.cols / 2, edges.rows / 2), cv::Scalar(255, 255, 255));
+
+	std::vector<std::vector<cv::Point>> contour;
+	cv::findContours(img, contour, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+
+	if (contour.size() == 0)
+		return false;
+
+	int contour_id = 0;
+	int max = 0;
+	for (int i = 0; i < contour.size(); i++) {
+		if (contour[i].size() > max) {
+			max = contour[i].size();
+			contour_id = i;
+		}
+	}
+
+	std::vector<MyMesh::Point> m_points;
+
+	m_points.push_back(MyMesh::Point(contour[contour_id][0].x, contour[contour_id][0].y, 0));
+
+	MyMesh::Point last_v(0, 0, 0);
+	float threshold = cos(45 * 0.0174533);
+	for (int i = 1; i < contour[contour_id].size(); i++)
+	{
+		MyMesh::Point p(contour[contour_id][i].x, contour[contour_id][i].y, 0);
+
+		MyMesh::Point v = (p - m_points.back()).normalized();
+
+		float dot = v.dot(last_v);
+		if (dot < threshold) {
+			m_points.push_back(p);
+			last_v = v;
+		}
+		else {
+			m_points.back() = p;
+		}
+	}
+
+	// find bounding box
+	float max_x = m_points[0][0];
+	float max_y = m_points[0][1];
+	float min_x = m_points[0][0];
+	float min_y = m_points[0][1];
+	for (int i = 0; i < m_points.size(); i++)
+	{
+		max_x = std::max(m_points[i][0], max_x);
+		max_y = std::max(m_points[i][1], max_y);
+		min_x = std::min(m_points[i][0], min_x);
+		min_y = std::min(m_points[i][1], min_y);
+	}
+
+	float norm_size = 1.0f;
+	float norm_scale = norm_size / std::max(std::max(abs(max_x - min_x), abs(max_y - min_y)), 1.0f);
+	float x_offset = (max_x + min_x) * norm_scale * 0.5f;
+	float y_offset = (max_y + min_y) * norm_scale * 0.5f;
+
+	// create constrainted delaunay triangulation handler
+	CGAL_CDT cdt;
+
+	// insertion
+	std::vector<CGAL_Vertex_handle> vertices;
+	for (int i = 0; i < m_points.size(); i++)
+	{
+		vertices.push_back(
+			cdt.insert(CGAL_Point(m_points[i][0] * norm_scale - x_offset, (1 - m_points[i][1] * norm_scale) - y_offset))
+		);
+	}
+
+	for (std::size_t i = 1; i < m_points.size(); ++i)
+	{
+		cdt.insert_constraint(vertices[i-1], vertices[i]);
+	}
+	cdt.insert_constraint(vertices[0], vertices[m_points.size() -1]);
+
+	std::cout << "Number of vertices: " << cdt.number_of_vertices() << std::endl;
+	Mesher mesher(cdt);
+	std::cout << "Meshing with criterias..." << std::endl;
+	mesher.set_criteria(CGAL_Criteria(0.125, 0.1));
+	mesher.refine_mesh();
+	std::cout << " done." << std::endl;
+
+	if (cdt.number_of_vertices() == 0)
+		return false;
+
+	float scale = 250.0f;
+	std::map<CGAL_Vertex_handle, MyMesh::VertexHandle> v_handles;
+	for (auto v_it = cdt.finite_vertices_begin(); v_it != cdt.finite_vertices_end(); ++v_it)
+	{
+		CGAL_Vertex_handle h = v_it->handle();
+		auto& p = v_it->point();
+		OpenMesh::Vec3f v(p.x() * scale, 0, p.y() * scale);
+		v_handles[h] = mesh.add_vertex(v);
+	}
+
+	std::vector<MyMesh::VertexHandle> face_vhandles;
+	for (auto f_it = cdt.finite_faces_begin(); f_it != cdt.finite_faces_end(); ++f_it)
+	{
+		if (f_it->is_in_domain()) {
+
+			CGAL_Vertex_handle h0 = f_it->vertex(0)->handle();
+			CGAL_Vertex_handle h1 = f_it->vertex(1)->handle();
+			CGAL_Vertex_handle h2 = f_it->vertex(2)->handle();
+
+			face_vhandles.clear();
+			face_vhandles.push_back(v_handles[h0]);
+			face_vhandles.push_back(v_handles[h1]);
+			face_vhandles.push_back(v_handles[h2]);
+
+			mesh.add_face(face_vhandles);
+		}
+	}
+
+	mesh.Initialization();
+
+	return true;
 }
-
-
-typedef CGAL::Exact_predicates_inexact_constructions_kernel           CGAL_K;
-typedef CGAL::Delaunay_mesh_vertex_base_2<CGAL_K>                     CGAL_Vb;
-typedef CGAL::Delaunay_mesh_face_base_2<CGAL_K>                       CGAL_Fb;
-typedef CGAL::Triangulation_data_structure_2<CGAL_Vb, CGAL_Fb>        CGAL_Tds;
-typedef CGAL::Constrained_Delaunay_triangulation_2<CGAL_K, CGAL_Tds>  CGAL_CDT;
-typedef CGAL::Delaunay_mesh_size_criteria_2<CGAL_CDT>                 CGAL_Criteria;
-
-typedef CGAL_CDT::Vertex_handle CGAL_Vertex_handle;
-typedef CGAL_CDT::Point CGAL_Point;
-
 bool GLMesh::Load2DModel(std::string fileName)
 {
 	std::ifstream ifs(fileName);
@@ -739,8 +857,6 @@ bool GLMesh::Load2DModel(std::string fileName)
 
 	std::cout << "Number of vertices: " << cdt.number_of_vertices() << std::endl;
 
-	
-
 	std::cout << "Meshing..." << std::endl;
 	CGAL::refine_Delaunay_mesh_2(cdt, list_of_seeds.begin(), list_of_seeds.end(),
 		CGAL_Criteria(0.125, 0.12));
@@ -750,7 +866,7 @@ bool GLMesh::Load2DModel(std::string fileName)
 	if (cdt.number_of_vertices() == 0)
 		return false;
 
-	float scale = 200.0f;
+	float scale = 250.0f;
 	std::map<CGAL_Vertex_handle, MyMesh::VertexHandle> v_handles;
 	for (auto v_it = cdt.finite_vertices_begin(); v_it != cdt.finite_vertices_end(); ++v_it)
 	{

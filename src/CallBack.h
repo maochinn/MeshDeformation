@@ -79,7 +79,7 @@ void idleCB(MyWindow* mw)
 void importCB(Fl_Widget*, MyWindow* mw)
 {
 	const char* fname =
-		fl_file_chooser("Pick a txt File", "*.txt", "../MeshDeformation/Models/data/");
+		fl_file_chooser("Pick a txt File", "*.{txt,bmp,jpg,png}", "../MeshDeformation/Models/data/");
 	if (fname) {
 		mw->myView->gl_mesh->Init(fname);
 		mw->damageMe();
