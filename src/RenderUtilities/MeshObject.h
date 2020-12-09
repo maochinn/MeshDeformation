@@ -102,7 +102,6 @@ private:
 
 	std::vector<unsigned int> selected_faces;
 
-	bool LoadModel(std::string fileName);
 	bool Load2DImage(std::string fileName);
 	bool Load2DModel(std::string fileName);
 	void LoadToShader();

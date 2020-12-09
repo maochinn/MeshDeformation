@@ -407,6 +407,12 @@ void MyMesh::Compute(unsigned int id)
 		}
 	}
 
+	/*offset = Point(0, 0, 0);
+	for (int i = 1; i < controlPoints.size(); i++) {
+		offset += controlPoints[i].c;
+	}
+	offset /= controlPoints.size();*/
+
 	//std::cout << "offset : "<< offset << "          \r";
 
 	Step1();
@@ -537,7 +543,23 @@ GLMesh::~GLMesh()
 
 bool GLMesh::Init(std::string fileName)
 {
-	if (Load2DImage(fileName))
+	std::string filetype = fileName.substr(fileName.find_last_of(".") + 1);
+	bool success = false;
+
+	if (filetype == "bmp") {
+		success = Load2DImage(fileName);
+	}
+	else if (filetype == "jpg") {
+		success = Load2DImage(fileName);
+	}
+	else if (filetype == "png") {
+		success = Load2DImage(fileName);
+	}
+	else if (filetype == "txt") {
+		success = Load2DModel(fileName);
+	}
+
+	if (success)
 	{
 		glGenVertexArrays(1, &this->vao.vao);
 		glBindVertexArray(this->vao.vao);
@@ -664,23 +686,6 @@ void GLMesh::dragControlPoint(MyMesh::Point p)
 bool GLMesh::validID(unsigned int faceID)
 {
 	return (faceID < mesh.n_faces());
-}
-
-bool GLMesh::LoadModel(std::string fileName)
-{
-	OpenMesh::IO::Options ropt;
-	if (OpenMesh::IO::read_mesh(mesh, fileName, ropt))
-	{
-		if (!ropt.check(OpenMesh::IO::Options::VertexNormal) && mesh.has_vertex_normals())
-		{
-			mesh.request_face_normals();
-			mesh.update_normals();
-			//mesh.release_face_normals();
-		}
-		return true;
-	}
-
-	return false;
 }
 
 typedef CGAL::Delaunay_mesher_2<CGAL_CDT, CGAL_Criteria> Mesher;
