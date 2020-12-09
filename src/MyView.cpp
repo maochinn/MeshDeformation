@@ -390,11 +390,11 @@ setProjection()
 	else if (mw->top_cam->value()) {
 		float wi, he;
 		if (aspect >= 1) {
-			wi = w() * 0.4f;
+			wi = w() * 0.3f;
 			he = wi / aspect;
 		}
 		else {
-			he = h() * 0.4f;
+			he = h() * 0.3f;
 			wi = he * aspect;
 		}
 

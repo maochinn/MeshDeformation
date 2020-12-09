@@ -54,12 +54,17 @@ private:
 
 	Eigen::SparseMatrix<double> L1, L2, LL1, LL2;
 	Eigen::SparseMatrix<double> C1, C2, CC1, CC2;
+
 	std::vector<Eigen::Triplet<double>> C1_triplets;
 	std::vector<Eigen::Triplet<double>> C2_triplets;
 
+	Eigen::SparseMatrix<double, Eigen::RowMajor> A1, A2;
+	Eigen::SparseMatrix<double> AA1, AA2;
+
+	Eigen::MatrixXd b1, b2x, b2y;
 	Eigen::VectorXd V1, V2x, V2y;
 
-	MyMesh::Point offset;
+ 	MyMesh::Point offset;
 
 	OpenMesh::EPropHandleT<Eigen::MatrixXd> prop_G;
 	OpenMesh::EPropHandleT<double> prop_W;
