@@ -364,6 +364,8 @@ void MyMesh::Compilation()
 	A1.bottomRows(N_C * 2) = C1;
 
 	AA1 = LL1 + CC1;
+	solver1.analyzePattern(AA1);
+	solver1.factorize(AA1);
 
 	b1.resize(N_E * 2 + N_C * 2, 1);
 	b1 = Eigen::MatrixXd::Zero(N_E * 2 + N_C * 2, 1);
@@ -373,6 +375,8 @@ void MyMesh::Compilation()
 	A2.bottomRows(N_C) = C2;
 
 	AA2 = LL2 + CC2;
+	solver2.analyzePattern(AA2);
+	solver2.factorize(AA2);
 
 	b2x.resize(N_E + N_C, 1);
 	b2x = Eigen::MatrixXd::Zero(N_E + N_C, 1);
@@ -409,14 +413,6 @@ void MyMesh::Compute(unsigned int id)
 		}
 	}
 
-	/*offset = Point(0, 0, 0);
-	for (int i = 1; i < controlPoints.size(); i++) {
-		offset += controlPoints[i].c;
-	}
-	offset /= controlPoints.size();*/
-
-	//std::cout << "offset : "<< offset << "          \r";
-
 	Step1();
 	Step2();
 
@@ -440,8 +436,7 @@ void MyMesh::Step1()
 	//Eigen::SparseLU< Eigen::SparseMatrix<double>> solver(AA1);
 	//Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> solver(AA1);
 
-	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver(AA1);
-	V1 = solver.solve(A1.transpose() * b1);
+	V1 = solver1.solve(A1.transpose() * b1);
 }
 
 void MyMesh::Step2()
@@ -469,7 +464,6 @@ void MyMesh::Step2()
 		HalfedgeHandle heh = halfedge_handle(e_it, 0);
 
 		Eigen::MatrixXd& G = this->property(prop_G, e_it);
-
 		double Weight = this->property(prop_W, e_it);
 
 		VertexHandle vh_from = from_vertex_handle(heh);
@@ -510,7 +504,6 @@ void MyMesh::Step2()
 		if (det == 0) {
 			b2x(row, 0) = e[0] * Weight;
 			b2y(row, 0) = e[2] * Weight;
-			std::cout << "ZERO ZERO DET!!\n";
 		}
 		else {
 			double norm = 1.0 / sqrt(det);
@@ -524,10 +517,8 @@ void MyMesh::Step2()
 		b2y(N_E + i, 0) = (controlPoints[i].c[2] - offset[2]) * W;
 	}
 
-	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver(AA2);
-
-	V2x = solver.solve(A2.transpose() * b2x);
-	V2y = solver.solve(A2.transpose() * b2y);
+	V2x = solver2.solve(A2.transpose() * b2x);
+	V2y = solver2.solve(A2.transpose() * b2y);
 }
 
 #pragma endregion

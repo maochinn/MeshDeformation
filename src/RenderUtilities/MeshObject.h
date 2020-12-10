@@ -60,6 +60,7 @@ private:
 
 	Eigen::SparseMatrix<double, Eigen::RowMajor> A1, A2;
 	Eigen::SparseMatrix<double> AA1, AA2;
+	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver1, solver2;
 
 	Eigen::MatrixXd b1, b2x, b2y;
 	Eigen::VectorXd V1, V2x, V2y;
