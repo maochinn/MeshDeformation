@@ -339,7 +339,9 @@ void MyMesh::RemoveControlPoint(unsigned int idx)
 	controlPoints[idx] = controlPoints[s_id];
 	controlPoints.erase(controlPoints.end() - 1);
 
-	Compilation();
+	if (!controlPoints.empty()) {
+		Compilation();
+	}
 }
 
 void MyMesh::Compilation()
@@ -648,6 +650,8 @@ void GLMesh::remove_selected()
 {
 	if (validID(select_id)) {
 		mesh.RemoveControlPoint(select_id);
+		selected_faces[select_id] = selected_faces.back();
+		selected_faces.pop_back();
 	}
 	select_id = -1;
 }
@@ -711,43 +715,26 @@ bool GLMesh::Load2DImage(std::string fileName)
 		}
 	}
 
-	std::vector<MyMesh::Point> m_points;
+	float epsilon = 0.005 * cv::arcLength(contour[contour_id], true);
 
-	m_points.push_back(MyMesh::Point(contour[contour_id][0].x, contour[contour_id][0].y, 0));
-
-	MyMesh::Point last_v(0, 0, 0);
-	float threshold = cos(45 * 0.0174533);
-	for (int i = 1; i < contour[contour_id].size(); i++)
-	{
-		MyMesh::Point p(contour[contour_id][i].x, contour[contour_id][i].y, 0);
-
-		MyMesh::Point v = (p - m_points.back()).normalized();
-
-		float dot = v.dot(last_v);
-		if (dot < threshold) {
-			m_points.push_back(p);
-			last_v = v;
-		}
-		else {
-			m_points.back() = p;
-		}
-	}
+	std::vector<cv::Point> approx;
+	cv::approxPolyDP(contour[contour_id], approx, epsilon, true);
 
 	// find bounding box
-	float max_x = m_points[0][0];
-	float max_y = m_points[0][1];
-	float min_x = m_points[0][0];
-	float min_y = m_points[0][1];
-	for (int i = 0; i < m_points.size(); i++)
+	int max_x = approx[0].x;
+	int max_y = approx[0].y;
+	int min_x = approx[0].x;
+	int min_y = approx[0].y;
+	for (int i = 0; i < approx.size(); i++)
 	{
-		max_x = std::max(m_points[i][0], max_x);
-		max_y = std::max(m_points[i][1], max_y);
-		min_x = std::min(m_points[i][0], min_x);
-		min_y = std::min(m_points[i][1], min_y);
+		max_x = std::max(approx[i].x, max_x);
+		max_y = std::max(approx[i].y, max_y);
+		min_x = std::min(approx[i].x, min_x);
+		min_y = std::min(approx[i].y, min_y);
 	}
 
 	float norm_size = 1.0f;
-	float norm_scale = norm_size / std::max(std::max(abs(max_x - min_x), abs(max_y - min_y)), 1.0f);
+	float norm_scale = norm_size / std::max(abs(max_x - min_x), abs(max_y - min_y));
 	float x_offset = (max_x + min_x) * norm_scale * 0.5f;
 	float y_offset = (max_y + min_y) * norm_scale * 0.5f;
 
@@ -756,18 +743,18 @@ bool GLMesh::Load2DImage(std::string fileName)
 
 	// insertion
 	std::vector<CGAL_Vertex_handle> vertices;
-	for (int i = 0; i < m_points.size(); i++)
+	for (int i = 0; i < approx.size(); i++)
 	{
 		vertices.push_back(
-			cdt.insert(CGAL_Point(m_points[i][0] * norm_scale - x_offset, (1 - m_points[i][1] * norm_scale) - y_offset))
+			cdt.insert(CGAL_Point(approx[i].x * norm_scale - x_offset, (1 - approx[i].y * norm_scale) - y_offset))
 		);
 	}
 
-	for (std::size_t i = 1; i < m_points.size(); ++i)
+	for (std::size_t i = 1; i < approx.size(); ++i)
 	{
 		cdt.insert_constraint(vertices[i-1], vertices[i]);
 	}
-	cdt.insert_constraint(vertices[0], vertices[m_points.size() -1]);
+	cdt.insert_constraint(vertices[0], vertices[approx.size() -1]);
 
 	std::cout << "Number of vertices: " << cdt.number_of_vertices() << std::endl;
 	Mesher mesher(cdt);
