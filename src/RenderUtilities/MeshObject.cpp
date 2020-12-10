@@ -92,9 +92,25 @@ void MyMesh::Registration()
 
 void MyMesh::preComputeG()
 {
+	Eigen::MatrixXd boundary_local(4,6);
+	boundary_local <<
+		-1.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+		0.0, -1.0, 0.0, 1.0, 0.0, 0.0,
+		-1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+		0.0, -1.0, 0.0, 0.0, 0.0, 1.0;
+
+	Eigen::MatrixXd inside_local(6,8);
+	inside_local <<
+		-1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+		0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+		-1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+		0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+		-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+		0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
+
 	// pre G
 	for (auto e_it = this->edges_begin(); e_it != this->edges_end(); ++e_it) {
-		int rows = (is_boundary(e_it) ? 6 : 8);
+		int rows = (is_boundary(e_it) ? 4 : 6);
 		int row = 0;
 
 		Eigen::MatrixXd G(rows, 2);
@@ -102,17 +118,17 @@ void MyMesh::preComputeG()
 
 		HalfedgeHandle heh = halfedge_handle(e_it, 0);
 		MyMesh::Point pFrom = point(from_vertex_handle(heh));
-		G(row, 0) = pFrom[0]; G(row, 1) = pFrom[2]; row += 1;
-		G(row, 0) = pFrom[2]; G(row, 1) = -pFrom[0]; row += 1;
+		/*G(row, 0) = pFrom[0]; G(row, 1) = pFrom[2]; row += 1;
+		G(row, 0) = pFrom[2]; G(row, 1) = -pFrom[0]; row += 1;*/
 
-		MyMesh::Point pTo = point(to_vertex_handle(heh));
+		MyMesh::Point pTo = point(to_vertex_handle(heh)) - pFrom;
 		G(row, 0) = pTo[0]; G(row, 1) = pTo[2]; row += 1;
 		G(row, 0) = pTo[2]; G(row, 1) = -pTo[0]; row += 1;
 
 		// boundary check
 		VertexHandle vh0 = opposite_vh(heh);
 		if (vh0 != MyMesh::InvalidVertexHandle) {
-			MyMesh::Point p0 = point(vh0);
+			MyMesh::Point p0 = point(vh0) - pFrom;
 			G(row, 0) = p0[0]; G(row, 1) = p0[2]; row += 1;
 			G(row, 0) = p0[2]; G(row, 1) = -p0[0]; row += 1;
 			Weight += abs(cot(pTo - p0, pFrom - p0));
@@ -120,7 +136,7 @@ void MyMesh::preComputeG()
 
 		VertexHandle vh1 = opposite_he_opposite_vh(heh);
 		if (vh1 != MyMesh::InvalidVertexHandle) {
-			MyMesh::Point p1 = point(vh1);
+			MyMesh::Point p1 = point(vh1) - pFrom;
 			G(row, 0) = p1[0]; G(row, 1) = p1[2]; row += 1;
 			G(row, 0) = p1[2]; G(row, 1) = -p1[0];
 
@@ -129,10 +145,13 @@ void MyMesh::preComputeG()
 
 		if (!is_boundary(e_it)) {
 			Weight *= 0.5;
+			this->property(prop_G, e_it) = ((G.transpose() * G).inverse() * G.transpose()) * inside_local;
+		}
+		else {
+			this->property(prop_G, e_it) = ((G.transpose() * G).inverse() * G.transpose()) * boundary_local;
 		}
 
-		this->property(prop_G, e_it) = (G.transpose() * G).inverse() * G.transpose();
-		this->property(prop_W, e_it) = 1;// Weight;
+		this->property(prop_W, e_it) = 1;
 	}
 }
 
@@ -395,7 +414,7 @@ void MyMesh::Compute(unsigned int id)
 	int N(n_vertices());
 
 	if (controlPoints.size() == 1) {
-		offset = (controlPoints[0].c - controlPoints[0].o);
+		Point offset = (controlPoints[0].c - controlPoints[0].o);
 		for (MyMesh::VertexIter v_it = vertices_begin(); v_it != vertices_end(); ++v_it)
 		{
 			deformed_vertices[v_it->idx()] = point(v_it) + offset;
@@ -403,22 +422,12 @@ void MyMesh::Compute(unsigned int id)
 		return;
 	}
 
-	float md = controlPoints[0].o.length();
-	offset = (controlPoints[0].c);
-	for (int i = 1; i < controlPoints.size(); i++) {
-		float d = controlPoints[i].o.length();
-		if (md > d) {
-			md = d;
-			offset = (controlPoints[i].c);
-		}
-	}
-
 	Step1();
 	Step2();
 
 	for (int i = 0; i < N; i++)
 	{
-		deformed_vertices[i] = MyMesh::Point(V2x(i) + offset[0], 0, V2y(i) + offset[2]);
+		deformed_vertices[i] = MyMesh::Point(V2x(i), 0, V2y(i));
 	}
 }
 
@@ -429,8 +438,8 @@ void MyMesh::Step1()
 	const int N_C(controlPoints.size());
 
 	for (int i = 0; i < controlPoints.size(); i++) {
-		b1(N_E * 2 + i * 2, 0) = (controlPoints[i].c[0] - offset[0]) * W;
-		b1(N_E * 2 + i * 2 + 1, 0) = (controlPoints[i].c[2] - offset[2]) * W;
+		b1(N_E * 2 + i * 2, 0) = controlPoints[i].c[0] * W;
+		b1(N_E * 2 + i * 2 + 1, 0) = controlPoints[i].c[2] * W;
 	}
 
 	//Eigen::SparseLU< Eigen::SparseMatrix<double>> solver(AA1);
@@ -513,8 +522,8 @@ void MyMesh::Step2()
 	}
 
 	for (int i = 0; i < controlPoints.size(); i++) {
-		b2x(N_E + i, 0) = (controlPoints[i].c[0] - offset[0]) * W;
-		b2y(N_E + i, 0) = (controlPoints[i].c[2] - offset[2]) * W;
+		b2x(N_E + i, 0) = controlPoints[i].c[0] * W;
+		b2y(N_E + i, 0) = controlPoints[i].c[2] * W;
 	}
 
 	V2x = solver2.solve(A2.transpose() * b2x);

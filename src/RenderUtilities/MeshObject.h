@@ -65,8 +65,6 @@ private:
 	Eigen::MatrixXd b1, b2x, b2y;
 	Eigen::VectorXd V1, V2x, V2y;
 
- 	MyMesh::Point offset;
-
 	OpenMesh::EPropHandleT<Eigen::MatrixXd> prop_G;
 	OpenMesh::EPropHandleT<double> prop_W;
 
