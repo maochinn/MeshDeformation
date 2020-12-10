@@ -99,8 +99,6 @@ private:
 	MyMesh mesh;
 	VAO vao;
 
-	std::vector<unsigned int> selected_faces;
-
 	bool Load2DImage(std::string fileName);
 	bool Load2DModel(std::string fileName);
 	void LoadToShader();
@@ -109,7 +107,5 @@ private:
 		std::vector<MyMesh::Normal>& normals,
 		std::vector<unsigned int>& indices);
 	void LoadTexCoordToShader();
-
-	bool AddSelectedFace(unsigned int faceID);
 };
 
