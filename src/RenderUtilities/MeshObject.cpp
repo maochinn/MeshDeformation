@@ -121,24 +121,27 @@ void MyMesh::preComputeG()
 		/*G(row, 0) = pFrom[0]; G(row, 1) = pFrom[2]; row += 1;
 		G(row, 0) = pFrom[2]; G(row, 1) = -pFrom[0]; row += 1;*/
 
-		MyMesh::Point pTo = point(to_vertex_handle(heh)) - pFrom;
-		G(row, 0) = pTo[0]; G(row, 1) = pTo[2]; row += 1;
-		G(row, 0) = pTo[2]; G(row, 1) = -pTo[0]; row += 1;
+		MyMesh::Point pTo = point(to_vertex_handle(heh));
+		MyMesh::Point vTo = pTo - pFrom;
+		G(row, 0) = vTo[0]; G(row, 1) = vTo[2]; row += 1;
+		G(row, 0) = vTo[2]; G(row, 1) = -vTo[0]; row += 1;
 
 		// boundary check
 		VertexHandle vh0 = opposite_vh(heh);
 		if (vh0 != MyMesh::InvalidVertexHandle) {
-			MyMesh::Point p0 = point(vh0) - pFrom;
-			G(row, 0) = p0[0]; G(row, 1) = p0[2]; row += 1;
-			G(row, 0) = p0[2]; G(row, 1) = -p0[0]; row += 1;
+			MyMesh::Point p0 = point(vh0);
+			MyMesh::Point v0 = p0 - pFrom;
+			G(row, 0) = v0[0]; G(row, 1) = v0[2]; row += 1;
+			G(row, 0) = v0[2]; G(row, 1) = -v0[0]; row += 1;
 			Weight += abs(cot(pTo - p0, pFrom - p0));
 		}
 
 		VertexHandle vh1 = opposite_he_opposite_vh(heh);
 		if (vh1 != MyMesh::InvalidVertexHandle) {
-			MyMesh::Point p1 = point(vh1) - pFrom;
-			G(row, 0) = p1[0]; G(row, 1) = p1[2]; row += 1;
-			G(row, 0) = p1[2]; G(row, 1) = -p1[0];
+			MyMesh::Point p1 = point(vh1);
+			MyMesh::Point v1 = p1 - pFrom;
+			G(row, 0) = v1[0]; G(row, 1) = v1[2]; row += 1;
+			G(row, 0) = v1[2]; G(row, 1) = -v1[0];
 
 			Weight += abs(cot(pTo - p1, pFrom - p1));
 		}
@@ -151,7 +154,7 @@ void MyMesh::preComputeG()
 			this->property(prop_G, e_it) = ((G.transpose() * G).inverse() * G.transpose()) * boundary_local;
 		}
 
-		this->property(prop_W, e_it) = 1;
+		this->property(prop_W, e_it) = Weight;
 	}
 }
 
