@@ -579,9 +579,9 @@ serverController g_sc;
 
 GLMesh::GLMesh()
 {
-	g_sc.Stop();
+	/*g_sc.Stop();
 	std::function<void(char*, int)> callback = [this](char* buffer, int length) { this->socketCallback(buffer, length); };
-	g_sc.Run(callback);
+	g_sc.Run(callback);*/
 }
 
 GLMesh::~GLMesh()
