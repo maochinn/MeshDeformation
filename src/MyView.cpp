@@ -154,12 +154,11 @@ int MyView::handle(int event)
 		break;
 
 	case FL_KEYBOARD:
-		//int k = Fl::event_key();
-		//int ks = Fl::event_state();
-		//if (k == 'd') {
-		//	this->gl_mesh->remove_selected();
-		//	return 1;
-		//}
+		/*int k = Fl::event_key();
+		int ks = Fl::event_state();
+		if (k == 'd') {
+			return 1;
+		}*/
 		break;
 	}
 
@@ -248,13 +247,14 @@ void MyView::draw()
 	//bind shader
 	this->commom_shader->Use();
 
+	this->gl_mesh->checkUpdate();
+
 	glUniformMatrix4fv(glGetUniformLocation(this->commom_shader->Program, "u_model"), 1, GL_FALSE, &model_matrix[0][0]);
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.941f, .25f, .25f)[0]);
 	this->gl_mesh->renderMesh();
 	glDisable(GL_DEPTH_TEST);
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.25f, .941f, .25f)[0]);
-	this->gl_mesh->renderSelectedMesh();
-
+	//this->gl_mesh->renderSelectedMesh();
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.26f, .181f, .172f)[0]);
 	glLineWidth(1.38f);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -266,7 +266,6 @@ void MyView::draw()
 	glUseProgram(0);
 
 	this->gl_mesh->renderControlPoints();
-
 	/*if(do_pick)
 		doPick(pick_x, pick_y);*/
 }

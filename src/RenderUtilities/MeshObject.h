@@ -79,6 +79,8 @@ public:
 	GLMesh();
 	~GLMesh();
 
+	float SIZE = 250;
+
 	bool Init(std::string fileName);
 
 	void resetMesh();
@@ -97,8 +99,12 @@ public:
 
 	unsigned int select_id = -1;
 	void selectControlPoint(MyMesh::Point);
-
 	void dragControlPoint(MyMesh::Point);
+
+	bool is_changed[1] = { false };
+	bool is_decoding = false;
+	void socketCallback(char* buffer, int length);
+	void checkUpdate();
 
 	bool validID(unsigned int);
 private:
@@ -113,6 +119,8 @@ private:
 		std::vector<MyMesh::Point>& vertices,
 		std::vector<MyMesh::Normal>& normals,
 		std::vector<unsigned int>& indices);
+
+	void UpdateShader();
 	void LoadTexCoordToShader();
 };
 

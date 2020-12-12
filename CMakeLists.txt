@@ -36,10 +36,12 @@ add_Definitions("-D_USE_MATH_DEFINES")
 
 add_executable(MeshDeformation
     ${SRC_DIR}CallBack.h
+    ${SRC_DIR}server.h
     ${SRC_DIR}MyView.h
     ${SRC_DIR}MyWindow.h
 
     ${SRC_DIR}main.cpp
+    ${SRC_DIR}server.cpp
     ${SRC_DIR}MyView.cpp
     ${SRC_DIR}MyWindow.cpp
 
@@ -73,7 +75,12 @@ debug ${LIB_DIR}Debug/OpenMeshToolsd.lib   optimized ${LIB_DIR}Release/OpenMeshT
 
 target_link_libraries(MeshDeformation 
     ${LIB_DIR}OpenGL32.lib
-    ${LIB_DIR}glu32.lib)
+    ${LIB_DIR}glu32.lib
+    
+    ${LIB_DIR}boost/libboost_regex-vc142-mt-gd-x64-1_73.lib
+    ${LIB_DIR}boost/libboost_date_time-vc142-mt-gd-x64-1_73.lib
+    ${LIB_DIR}boost/libboost_regex-vc142-mt-x64-1_73.lib
+    ${LIB_DIR}boost/libboost_date_time-vc142-mt-x64-1_73.lib)
 
 target_link_libraries(MeshDeformation Utilities)
     

@@ -24,14 +24,18 @@ class LM_detector():
             scale = max(h, w) / (1000.0)
             image = cv2.resize(image, (int(w / scale), int(h / scale)))
 
+        h, w, c = image.shape
+        norm_scale = 1.2 / max(h, w)
+
         # torch
         detected_faces = self.fa.face_detector.detect_from_image(image[..., ::-1].copy())
 
         if detected_faces != None and len(detected_faces) != 0:
             landmarks = self.fa.get_landmarks(image, detected_faces=[detected_faces[0],])
 
+            # normalize to 0 ~ 1
             for face in landmarks:
-                face *= scale
+                face *= norm_scale
 
             return landmarks
 

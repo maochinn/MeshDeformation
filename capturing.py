@@ -12,15 +12,16 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((HOST, PORT))
 
 def send(landmarks):
-    print(landmarks.shape)
     lms = landmarks.flatten()
+    print(lms.shape)
     data = struct.pack("!" + "f" * len(lms), *lms)
     s.sendall(data)
 
-test_lms = np.array([[1,2] * 68]).astype(np.float32)
-send(test_lms)
+#test_lms = np.array([[0.2,0.5] * 68,]).astype(np.float32)
+#send(test_lms)
 
 def start_tracking():
+
     print("LOADING MODEL")
     # 2d / 3d,  cuda / cpu
     lm_detector = LM_detector(lm_type=int(2), device='cuda', face_detector='sfd')
@@ -30,7 +31,7 @@ def start_tracking():
     cap = cv2.VideoCapture(0)
     print("CAMERA OPEND")
 
-    if(cap.isOpened()):
+    while(cap.isOpened()):
 
         start_time = time.time()
 
@@ -44,10 +45,6 @@ def start_tracking():
             print("MISSING")
         else:
             send(faces[0])
-            # landmarks = faces[0]
-            # for lm in landmarks:
-            #     cv2.circle(frame, (lm[0], lm[1]), 4, (0,0,255), -1)
-            
 
         print_time = time.time()
 
@@ -55,11 +52,13 @@ def start_tracking():
 
         print(detect_time - start_time, print_time - detect_time, end='       \r')
 
-        if cv2.waitKey(0) & 0xFF == ord('q'):
+        if cv2.waitKey(50) & 0xFF == ord('q'):
             print("QUIT")
-            #break
+            break
 
     print("CLOSED")
 
     cap.release()
     cv2.destroyAllWindows()
+
+start_tracking()

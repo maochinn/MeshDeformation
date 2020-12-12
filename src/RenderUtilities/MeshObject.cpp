@@ -441,9 +441,19 @@ unsigned int MyMesh::FindControlPoint(MyMesh::Point, double)
 
 void MyMesh::Compute(unsigned int id)
 {
-	int N(n_vertices());
+	std::cout << id << std::endl;
 
-	if (controlPoints.size() == 1) {
+	if (id == -1) {
+		std::cout << "YOYYO" << std::endl;
+	}
+
+	int N_V(n_vertices());
+	int N_C = controlPoints.size();
+
+	if (N_V == 0 || N_C == 0)
+		return;
+
+	if (N_C == 1) {
 		Point offset = (controlPoints[0].c - controlPoints[0].o);
 		for (MyMesh::VertexIter v_it = vertices_begin(); v_it != vertices_end(); ++v_it)
 		{
@@ -455,7 +465,7 @@ void MyMesh::Compute(unsigned int id)
 	Step1();
 	Step2();
 
-	for (int i = 0; i < N; i++)
+	for (int i = 0; i < N_V; i++)
 	{
 		deformed_vertices[i] = MyMesh::Point(V2x(i), 0, V2y(i));
 	}
@@ -564,15 +574,19 @@ void MyMesh::Step2()
 
 #pragma region GLMesh
 
+#include "..\server.h"
+serverController g_sc;
+
 GLMesh::GLMesh()
 {
+	g_sc.Stop();
+	std::function<void(char*, int)> callback = [this](char* buffer, int length) { this->socketCallback(buffer, length); };
+	g_sc.Run(callback);
 }
 
 GLMesh::~GLMesh()
 {
-
 }
-
 bool GLMesh::Init(std::string fileName)
 {
 	std::string filetype = fileName.substr(fileName.find_last_of(".") + 1);
@@ -715,11 +729,46 @@ void GLMesh::dragControlPoint(MyMesh::Point p)
 	this->mesh.controlPoints[select_id].c = p;
 
 	this->mesh.Compute(select_id);
+	UpdateShader();
+}
 
-	std::vector<MyMesh::Normal> normals;
-	std::vector<unsigned int> indices;
+void GLMesh::socketCallback(char* buffer, int length)
+{
+	if (is_decoding)
+		return;
 
-	LoadToShader(mesh.deformed_vertices, normals, indices);
+	is_decoding = true;
+
+	float x, y;
+	int idx = 0;
+	int N_C = mesh.controlPoints.size();
+	std::reverse(buffer, buffer + length);
+	for (int i = 0; i < length && idx < N_C; i += 8, idx += 1) {
+		char* y_pos = buffer + i;
+		char* x_pos = buffer + i + 4;
+
+		memcpy(&x, x_pos, sizeof(float));
+		memcpy(&y, y_pos, sizeof(float));
+
+		// x,y is [0 , 1]
+		mesh.controlPoints[N_C-1-idx].c[0] = (x * 2 - 1) * SIZE;
+		mesh.controlPoints[N_C-1-idx].c[2] = -(y * 2 - 1) * SIZE;
+
+		//std::cout << x << ", " << y << ", "<< mesh.controlPoints[N_C - 1 - idx].c[0] << ", " << mesh.controlPoints[N_C - 1 - idx].c[2] << std::endl;
+	}
+
+	is_changed[0] = true;
+	//std::cout << "end" << std::endl;
+	is_decoding = false;
+}
+
+void GLMesh::checkUpdate()
+{
+	if (is_changed[0]) {
+		is_changed[0] = false;
+		mesh.Compute(0);
+		UpdateShader();
+	}
 }
 
 bool GLMesh::validID(unsigned int faceID)
@@ -801,7 +850,7 @@ bool GLMesh::Load2DImage(std::string fileName)
 	if (cdt.number_of_vertices() == 0)
 		return false;
 
-	float scale = 280;
+	float scale = SIZE;
 	std::map<CGAL_Vertex_handle, MyMesh::VertexHandle> v_handles;
 	for (auto v_it = cdt.finite_vertices_begin(); v_it != cdt.finite_vertices_end(); ++v_it)
 	{
@@ -914,7 +963,7 @@ bool GLMesh::Load2DModel(std::string fileName)
 	if (cdt.number_of_vertices() == 0)
 		return false;
 
-	float scale = 250.0f;
+	float scale = SIZE;
 	std::map<CGAL_Vertex_handle, MyMesh::VertexHandle> v_handles;
 	for (auto v_it = cdt.finite_vertices_begin(); v_it != cdt.finite_vertices_end(); ++v_it)
 	{
@@ -1007,6 +1056,12 @@ void GLMesh::LoadToShader(
 	}
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+}
+
+void GLMesh::UpdateShader() {
+	std::vector<MyMesh::Normal> normals;
+	std::vector<unsigned int> indices;
+	LoadToShader(mesh.deformed_vertices, normals, indices);
 }
 
 void GLMesh::LoadTexCoordToShader()
@@ -1106,6 +1161,7 @@ bool GLMesh::importControlPoints(std::string fname)
 
 		mesh.AddControlPoints(controlPoints);
 		mesh.Compute(0);
+		UpdateShader();
 
 		return true;
 	}
