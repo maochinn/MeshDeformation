@@ -70,16 +70,31 @@ void idleCB(MyWindow* mw)
 	}
 }
 
-//void testingCB(Fl_Widget*, MyWindow* mw)
-//{
-//	mw->myView->gl_mesh->degenerationMeshToLine(mw->degeneration_slider->value());
-//	mw->damageMe();
-//}
+void importPresetCB(Fl_Widget*, MyWindow* mw)
+{
+	const char* fname =
+		fl_file_chooser("Pick control point preset", "*.{preset}", "../MeshDeformation/Models/data/presets/");
+
+	if (fname) {
+		mw->myView->gl_mesh->importControlPoints(fname);
+		mw->damageMe();
+	}
+}
+void exportPresetCB(Fl_Widget*, MyWindow* mw)
+{
+	const char* fname =
+		fl_file_chooser("Pick control point preset", "*.{preset}", "../MeshDeformation/Models/data/presets/");
+
+	if (fname) {
+		mw->myView->gl_mesh->exportControlPoints(fname);
+		mw->damageMe();
+	}
+}
 
 void importCB(Fl_Widget*, MyWindow* mw)
 {
 	const char* fname =
-		fl_file_chooser("Pick a txt File", "*.{txt,bmp,jpg,png}", "../MeshDeformation/Models/data/");
+		fl_file_chooser("Pick input file", "*.{txt,bmp,jpg,png,obj}", "../MeshDeformation/Models/data/");
 	if (fname) {
 		mw->myView->gl_mesh->Init(fname);
 		mw->damageMe();
@@ -88,8 +103,13 @@ void importCB(Fl_Widget*, MyWindow* mw)
 
 void exportCB(Fl_Widget*, MyWindow* mw)
 {
-	mw->myView->gl_mesh->exportMesh();
-	mw->damageMe();
+	const char* fname =
+		fl_file_chooser("Pick output file", "*.{obj}", "../MeshDeformation/Models/data/output.obj");
+
+	if (fname) {
+		mw->myView->gl_mesh->exportMesh(fname);
+		//mw->damageMe();
+	}
 }
 
 void resetCB(Fl_Widget*, MyWindow* mw)

@@ -21,7 +21,6 @@ public:
 	void Reset();
 
 	void Initialization();
-
 	void Registration();
 	void preComputeG();
 	void preComputeL1();
@@ -38,6 +37,7 @@ public:
 
 	void InitCompilation();
 	void AddControlPoint(ControlPoint);
+	void AddControlPoints(std::vector<ControlPoint>&);
 	void RemoveControlPoint(unsigned int);
 	void Compilation();
 
@@ -53,6 +53,7 @@ public:
 	std::vector<MyMesh::Point> deformed_vertices;
 
 private:
+	bool holdCompilation = false;
 
 	Eigen::SparseMatrix<double> L1, L2, LL1, LL2;
 	Eigen::SparseMatrix<double> C1, C2, CC1, CC2;
@@ -81,7 +82,10 @@ public:
 	bool Init(std::string fileName);
 
 	void resetMesh();
-	bool exportMesh();
+	bool exportMesh(std::string fileName);
+
+	bool importControlPoints(std::string fname);
+	bool exportControlPoints(std::string fname);
 
 	void renderMesh();
 	void renderSelectedMesh();
@@ -103,6 +107,7 @@ private:
 
 	bool Load2DImage(std::string fileName);
 	bool Load2DModel(std::string fileName);
+	bool LoadMesh(std::string fileName);
 	void LoadToShader();
 	void LoadToShader(
 		std::vector<MyMesh::Point>& vertices,

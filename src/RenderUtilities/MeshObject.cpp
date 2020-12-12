@@ -348,7 +348,16 @@ void MyMesh::AddControlPoint(ControlPoint cp)
 	C2_triplets.push_back(Eigen::Triplet<double>(c2_idx, p2_idx, cp.w[2] * W));
 
 	controlPoints.push_back(cp);
+	Compilation();
+}
 
+void MyMesh::AddControlPoints(std::vector<ControlPoint>& cps)
+{
+	holdCompilation = true;
+	for (int i = 0; i < cps.size(); i++) {
+		AddControlPoint(cps[i]);
+	}
+	holdCompilation = false;
 	Compilation();
 }
 
@@ -383,6 +392,9 @@ void MyMesh::RemoveControlPoint(unsigned int idx)
 
 void MyMesh::Compilation()
 {
+	if (holdCompilation)
+		return;
+
 	const int N_V(n_vertices());
 	const int N_E(n_edges());
 	const int N_C(controlPoints.size());
@@ -568,14 +580,11 @@ bool GLMesh::Init(std::string fileName)
 
 	mesh.clear();
 
-	if (filetype == "bmp") {
+	if (filetype == "bmp" || filetype == "jpg" || filetype == "png") {
 		success = Load2DImage(fileName);
 	}
-	else if (filetype == "jpg") {
-		success = Load2DImage(fileName);
-	}
-	else if (filetype == "png") {
-		success = Load2DImage(fileName);
+	else if (filetype == "obj") {
+		success = LoadMesh(fileName);
 	}
 	else if (filetype == "txt") {
 		success = Load2DModel(fileName);
@@ -938,6 +947,26 @@ bool GLMesh::Load2DModel(std::string fileName)
 	return true;
 }
 
+bool GLMesh::LoadMesh(std::string fileName)
+{
+
+	OpenMesh::IO::Options ropt;
+	if (OpenMesh::IO::read_mesh(mesh, fileName, ropt))
+	{
+		if (!ropt.check(OpenMesh::IO::Options::VertexNormal) && mesh.has_vertex_normals())
+		{
+			mesh.request_face_normals();
+			mesh.update_normals();
+			//mesh.release_face_normals();
+
+			mesh.Initialization();
+		}
+		return true;
+	}
+
+	return false;
+}
+
 void GLMesh::LoadToShader()
 {
 	std::vector<MyMesh::Point> vertices;
@@ -1011,14 +1040,13 @@ void GLMesh::resetMesh()
 	LoadToShader(mesh.deformed_vertices, normals, indices);
 }
 
-bool GLMesh::exportMesh()
+bool GLMesh::exportMesh(std::string filename)
 {
-	// write mesh to output.obj
 	try
 	{
-		if (!OpenMesh::IO::write_mesh(mesh, "output.obj"))
+		if (!OpenMesh::IO::write_mesh(mesh, filename))
 		{
-			std::cerr << "Cannot write mesh to file 'output.off'" << std::endl;
+			std::cerr << "Cannot write mesh to file : " << filename << std::endl;
 			return false;
 		}
 	}
@@ -1028,6 +1056,106 @@ bool GLMesh::exportMesh()
 		return false;
 	}
 	return true;
+}
+
+bool GLMesh::importControlPoints(std::string fname)
+{
+	std::ifstream ifs(fname, std::ios::binary);
+
+	if (ifs.is_open()) {
+
+		int N_C;
+		ifs.read((char*)&N_C, sizeof(int));
+
+		std::vector<MyMesh::ControlPoint> controlPoints;
+
+		for (int i = 0; i < N_C; i++) {
+
+			MyMesh::ControlPoint cp;
+
+			int idx;
+			ifs.read((char*)&idx, sizeof(int));
+			
+			double w0, w1, w2;
+			ifs.read((char*)&w0, sizeof(double));
+			ifs.read((char*)&w1, sizeof(double));
+			ifs.read((char*)&w2, sizeof(double));
+
+			float ox, oy;
+			ifs.read((char*)&ox, sizeof(float));
+			ifs.read((char*)&oy, sizeof(float));
+
+
+			float cx, cy;
+			ifs.read((char*)&cx, sizeof(float));
+			ifs.read((char*)&cy, sizeof(float));
+
+			if (validID(idx)) {
+				cp.fh = mesh.face_handle(idx);
+
+				cp.w[0] = w0;
+				cp.w[1] = w1;
+				cp.w[2] = w2;
+
+				cp.o = MyMesh::Point(ox, 0, oy);
+				cp.c = MyMesh::Point(cx, 0, cy);
+
+				controlPoints.push_back(cp);
+			}
+		}
+
+		mesh.AddControlPoints(controlPoints);
+		mesh.Compute(0);
+
+		return true;
+	}
+
+	return false;
+}
+
+bool GLMesh::exportControlPoints(std::string fname)
+{
+	std::ofstream ofs(fname, std::ios::binary);
+
+	if (ofs.is_open())
+	{
+		//MyMesh::FaceHandle fh; idx -> int * 1
+		//double w[3];           double * 3
+		//MyMesh::Point o;       float * 2
+		//MyMesh::Point c;       float * 2
+
+		int N_C = mesh.controlPoints.size();
+
+		ofs.write((char*)&N_C, sizeof(int));
+
+		for (int i = 0; i < N_C; i++) {
+
+			int idx = mesh.controlPoints[i].fh.idx();
+			ofs.write((char*)&idx, sizeof(int));
+
+
+			double w0 = mesh.controlPoints[i].w[0];
+			double w1 = mesh.controlPoints[i].w[1];
+			double w2 = mesh.controlPoints[i].w[2];
+			ofs.write((char*)&w0, sizeof(double));
+			ofs.write((char*)&w1, sizeof(double));
+			ofs.write((char*)&w2, sizeof(double));
+
+
+			float ox = mesh.controlPoints[i].o[0];
+			float oy = mesh.controlPoints[i].o[2];
+			ofs.write((char*)&ox, sizeof(float));
+			ofs.write((char*)&oy, sizeof(float));
+
+
+			float cx = mesh.controlPoints[i].c[0];
+			float cy = mesh.controlPoints[i].c[2];
+			ofs.write((char*)&cx, sizeof(float));
+			ofs.write((char*)&cy, sizeof(float));
+		}
+		return true;
+	}
+	return false;
 }
 
 #pragma endregion

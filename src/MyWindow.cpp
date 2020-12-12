@@ -106,6 +106,12 @@ MyWindow(const int x, const int y)
 		exportMesh->callback((Fl_Callback*)exportCB, this);
 		Fl_Button* reset = new Fl_Button(735, pty, 60, 20, "Reset");
 		reset->callback((Fl_Callback*)resetCB, this);
+		pty += 35;
+
+		Fl_Button* importPreset = new Fl_Button(605, pty, 90, 18, "Import Preset");
+		importPreset->callback((Fl_Callback*)importPresetCB, this);
+		Fl_Button* exportPreset = new Fl_Button(705, pty, 90, 18, "Export Preset");
+		exportPreset->callback((Fl_Callback*)exportPresetCB, this);
 		pty += 25;
 
 		/*Fl_Button* Simplification = new Fl_Button(605, pty, 60, 20, "Simplification");
