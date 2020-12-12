@@ -83,7 +83,7 @@ void importPresetCB(Fl_Widget*, MyWindow* mw)
 void exportPresetCB(Fl_Widget*, MyWindow* mw)
 {
 	const char* fname =
-		fl_file_chooser("Pick control point preset", "*.{preset}", "../MeshDeformation/Models/data/presets/");
+		fl_file_chooser("Pick control point preset", "*.{preset}", "../MeshDeformation/Models/data/presets/output.preset");
 
 	if (fname) {
 		mw->myView->gl_mesh->exportControlPoints(fname);
