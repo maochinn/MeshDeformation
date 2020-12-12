@@ -606,7 +606,16 @@ void GLMesh::renderMesh()
 }
 void GLMesh::renderSelectedMesh()
 {
-	if (selected_faces.size() > 0)
+	std::vector<unsigned int> selected_faces;
+	for (const auto& cp : this->mesh.controlPoints)
+	{
+		unsigned int face_id = cp.fh.idx();
+		if (std::find(selected_faces.begin(), selected_faces.end(), face_id) == selected_faces.end() &&
+			face_id >= 0 && face_id < mesh.n_faces())
+			selected_faces.push_back(face_id);
+	}
+
+	if (!selected_faces.empty())
 	{
 		std::vector<unsigned int*> offsets(selected_faces.size());
 		for (int i = 0; i < offsets.size(); ++i)
@@ -646,15 +655,12 @@ void GLMesh::renderControlPoints()
 void GLMesh::select(unsigned int tri_ID, MyMesh::Point p)
 {
 	this->mesh.select(tri_ID, p);
-	this->AddSelectedFace(tri_ID);
 }
 
 void GLMesh::remove_selected()
 {
 	if (validID(select_id)) {
 		mesh.RemoveControlPoint(select_id);
-		selected_faces[select_id] = selected_faces.back();
-		selected_faces.pop_back();
 	}
 	select_id = -1;
 }
@@ -1002,16 +1008,6 @@ bool GLMesh::exportMesh()
 		return false;
 	}
 	return true;
-}
-bool GLMesh::AddSelectedFace(unsigned int faceID)
-{
-	if (std::find(selected_faces.begin(), selected_faces.end(), faceID) == selected_faces.end() &&
-		faceID >= 0 && faceID < mesh.n_faces())
-	{
-		selected_faces.push_back(faceID);
-		return true;
-	}
-	return false;
 }
 
 #pragma endregion

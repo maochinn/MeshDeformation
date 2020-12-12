@@ -80,8 +80,10 @@ public:
 	ArcBallCam		arcball;			// keep an ArcBall for the UI
 	MyWindow* mw;				// The parent of this display window
 
-	bool do_pick = false;
-	bool is_picking = false;
+	float top_cam_range = 0.3f;
+
+	//bool do_pick = false;
+	//bool is_picking = false;
 	int pick_x;
 	int pick_y;
 

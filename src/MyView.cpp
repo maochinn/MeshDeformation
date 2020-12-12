@@ -101,25 +101,29 @@ int MyView::handle(int event)
 		// Mouse button being pushed event
 	case FL_PUSH:
 		last_push = Fl::event_button();
-		// if the left button be pushed is left mouse button
-		if (last_push == FL_LEFT_MOUSE) {
-			if (!is_picking) {
-				do_pick = true;
-				pick_x = Fl::event_x();
-				pick_y = Fl::event_y();
-			}
-			damage(1);
-			return 1;
-		}
-		else if (last_push == FL_RIGHT_MOUSE) {
+		//// if the left button be pushed is left mouse button
+		//if (last_push == FL_LEFT_MOUSE)
+		//	if (!is_picking) {
+		//		do_pick = true;
+		//		pick_x = Fl::event_x();
+		//		pick_y = Fl::event_y();
+		//	}
+		/*else */if (last_push == FL_RIGHT_MOUSE)
 			doSelect(Fl::event_x(), Fl::event_y());
-			damage(1);
-			return 1;
-		}
-		break;
+
+		damage(1);
+		return 1;
 
 		// Mouse button release event
 	case FL_RELEASE: // button release
+		if (last_push == FL_LEFT_MOUSE)
+			doPick(Fl::event_x(), Fl::event_y());
+		else if (last_push == FL_MIDDLE_MOUSE)
+		{
+			doSelect(Fl::event_x(), Fl::event_y());
+			this->gl_mesh->remove_selected();
+		}
+
 		damage(1);
 		last_push = 0;
 		return 1;
@@ -142,15 +146,23 @@ int MyView::handle(int event)
 		focus(this);
 		break;
 
+	case FL_MOUSEWHEEL:
+		top_cam_range += (Fl::event_dy() < 0) ? -0.01f : 0.01f;
+		if (top_cam_range <= 0.0f)
+			top_cam_range = 0.001f;
+		return 1;
+		break;
+
 	case FL_KEYBOARD:
-		int k = Fl::event_key();
-		int ks = Fl::event_state();
-		if (k == 'd') {
-			this->gl_mesh->remove_selected();
-			return 1;
-		};
+		//int k = Fl::event_key();
+		//int ks = Fl::event_state();
+		//if (k == 'd') {
+		//	this->gl_mesh->remove_selected();
+		//	return 1;
+		//}
 		break;
 	}
+
 
 	return Fl_Gl_Window::handle(event);
 }
@@ -255,8 +267,8 @@ void MyView::draw()
 
 	this->gl_mesh->renderControlPoints();
 
-	if(do_pick)
-		doPick(pick_x, pick_y);
+	/*if(do_pick)
+		doPick(pick_x, pick_y);*/
 }
 
 void MyView::resize(int x, int y, int w, int h)
@@ -267,8 +279,8 @@ void MyView::resize(int x, int y, int w, int h)
 
 void MyView::doPick(int mx, int my)
 {
-	is_picking = true;
-	do_pick = false;
+	//is_picking = true;
+	//do_pick = false;
 
 	// bind picking
 	this->picking_shader->Use();
@@ -319,7 +331,7 @@ void MyView::doPick(int mx, int my)
 		std::cout << "Nope" << std::endl;
 	}
 
-	is_picking = false;
+	//is_picking = false;
 }
 
 void MyView::doSelect(int mx, int my)
@@ -390,11 +402,11 @@ setProjection()
 	else if (mw->top_cam->value()) {
 		float wi, he;
 		if (aspect >= 1) {
-			wi = w() * 0.3f;
+			wi = w() * top_cam_range;
 			he = wi / aspect;
 		}
 		else {
-			he = h() * 0.3f;
+			he = h() * top_cam_range;
 			wi = he * aspect;
 		}
 
