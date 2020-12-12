@@ -18,6 +18,8 @@ public:
 	MyMesh();
 	~MyMesh();
 
+	void Reset();
+
 	void Initialization();
 
 	void Registration();

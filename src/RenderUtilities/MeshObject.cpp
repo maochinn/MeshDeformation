@@ -69,15 +69,29 @@ MyMesh::~MyMesh()
 
 }
 
-void MyMesh::Initialization()
+void MyMesh::Reset()
 {
-	std::cout << "Vert : " << n_vertices() << std::endl;
-	std::cout << "Face : " << n_faces() << std::endl;
 	deformed_vertices.clear();
 	for (MyMesh::VertexIter v_it = vertices_begin(); v_it != vertices_end(); ++v_it)
 	{
 		deformed_vertices.push_back(point(v_it));
 	}
+	for (int i = 0; i < controlPoints.size(); i++) {
+		controlPoints[i].c = controlPoints[i].o;
+	}
+}
+
+void MyMesh::Initialization()
+{
+	std::cout << "Vert : " << n_vertices() << std::endl;
+	std::cout << "Face : " << n_faces() << std::endl;
+
+	deformed_vertices.clear();
+	for (MyMesh::VertexIter v_it = vertices_begin(); v_it != vertices_end(); ++v_it)
+	{
+		deformed_vertices.push_back(point(v_it));
+	}
+
 	Registration();
 	InitCompilation();
 }
@@ -303,6 +317,7 @@ void MyMesh::select(unsigned int face_ID, MyMesh::Point p)
 
 void MyMesh::InitCompilation()
 {
+	controlPoints.clear();
 	C1_triplets.clear();
 	C2_triplets.clear();
 }
@@ -550,6 +565,8 @@ bool GLMesh::Init(std::string fileName)
 {
 	std::string filetype = fileName.substr(fileName.find_last_of(".") + 1);
 	bool success = false;
+
+	mesh.clear();
 
 	if (filetype == "bmp") {
 		success = Load2DImage(fileName);
@@ -988,9 +1005,12 @@ void GLMesh::LoadTexCoordToShader()
 
 void GLMesh::resetMesh()
 {
-	//mesh.reloadMesh(initial_vertices, initial_indices);
-	LoadToShader();
+	this->mesh.Reset();
+	std::vector<MyMesh::Normal> normals;
+	std::vector<unsigned int> indices;
+	LoadToShader(mesh.deformed_vertices, normals, indices);
 }
+
 bool GLMesh::exportMesh()
 {
 	// write mesh to output.obj
