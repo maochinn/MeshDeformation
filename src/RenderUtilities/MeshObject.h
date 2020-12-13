@@ -87,8 +87,8 @@ public:
 	// i / o
 	bool exportMesh(std::string fileName);
 	// control point io
-	bool importControlPoints(std::string fname);
-	bool exportControlPoints(std::string fname);
+	bool importPreset(std::string fname);
+	bool exportPreset(std::string fname);
 
 	// rendering
 	void renderMesh();

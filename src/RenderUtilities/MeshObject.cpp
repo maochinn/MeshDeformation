@@ -835,6 +835,7 @@ void GLMesh::removeKeyPoint()
 {
 	if (select_k_id != -1) {
 		keyPoints.erase(keyPoints.begin() + select_k_id);
+		keyData.erase(keyData.begin() + select_k_id);
 	}
 	select_k_id = -1;
 }
@@ -1265,7 +1266,7 @@ bool GLMesh::exportMesh(std::string filename)
 	return true;
 }
 
-bool GLMesh::importControlPoints(std::string fname)
+bool GLMesh::importPreset(std::string fname)
 {
 	std::ifstream ifs(fname, std::ios::binary);
 
@@ -1274,8 +1275,9 @@ bool GLMesh::importControlPoints(std::string fname)
 		int N_C;
 		ifs.read((char*)&N_C, sizeof(int));
 
-		std::vector<MyMesh::ControlPoint> controlPoints;
+		mesh.InitCompilation();
 
+		std::vector<MyMesh::ControlPoint> controlPoints;
 		for (int i = 0; i < N_C; i++) {
 
 			MyMesh::ControlPoint cp;
@@ -1312,6 +1314,38 @@ bool GLMesh::importControlPoints(std::string fname)
 		}
 
 		mesh.AddControlPoints(controlPoints);
+
+		keyPoints.clear();
+		keyData.clear();
+
+		if (!ifs.eof())
+		{
+			int N_K;
+			ifs.read((char*)&N_K, sizeof(int));
+		
+			for (int i = 0; i < N_K; i++) {
+				float px;
+				float py;
+
+				ifs.read((char*)&px, sizeof(float));
+				ifs.read((char*)&py, sizeof(float));
+
+				keyPoints.push_back(MyMesh::Point(px, py, 0));
+
+				std::vector<MyMesh::Point> cps;
+				for (int j = 0; j < N_C; j++) {
+					float cx;
+					float cy;
+					ifs.read((char*)&cx, sizeof(float));
+					ifs.read((char*)&cy, sizeof(float));
+
+					cps.push_back(MyMesh::Point(cx, 0, cy));
+				}
+
+				keyData.push_back(cps);
+			}
+		}
+
 		mesh.Compute(0);
 		UpdateShader();
 
@@ -1321,22 +1355,21 @@ bool GLMesh::importControlPoints(std::string fname)
 	return false;
 }
 
-bool GLMesh::exportControlPoints(std::string fname)
+bool GLMesh::exportPreset(std::string fname)
 {
 	std::ofstream ofs(fname, std::ios::binary);
 
 	if (ofs.is_open())
 	{
-		//MyMesh::FaceHandle fh; idx -> int * 1
-		//double w[3];           double * 3
-		//MyMesh::Point o;       float * 2
-		//MyMesh::Point c;       float * 2
-
+		// control point counts int * 1
 		int N_C = mesh.controlPoints.size();
-
 		ofs.write((char*)&N_C, sizeof(int));
 
 		for (int i = 0; i < N_C; i++) {
+			//MyMesh::FaceHandle fh; idx -> int * 1
+			//double w[3];           double * 3
+			//MyMesh::Point o;       float * 2
+			//MyMesh::Point c;       float * 2
 
 			int idx = mesh.controlPoints[i].fh.idx();
 			ofs.write((char*)&idx, sizeof(int));
@@ -1361,6 +1394,28 @@ bool GLMesh::exportControlPoints(std::string fname)
 			ofs.write((char*)&cx, sizeof(float));
 			ofs.write((char*)&cy, sizeof(float));
 		}
+		
+		// keypoint counts int * 1
+		int N_K = keyPoints.size();
+		ofs.write((char*)&N_K, sizeof(int));
+
+		for (int i = 0; i < N_K; i++) {
+			//MyMesh::Point p float * 2
+
+			float px = keyPoints[i][0];
+			float py = keyPoints[i][2];
+			ofs.write((char*)&px, sizeof(float));
+			ofs.write((char*)&py, sizeof(float));
+
+			for (int j = 0; j < N_C; j++) {
+				//MyMesh::Point c float * 2
+				float cx = keyData[i][j][0];
+				float cy = keyData[i][j][2];
+				ofs.write((char*)&cx, sizeof(float));
+				ofs.write((char*)&cy, sizeof(float));
+			}
+		}
+
 		return true;
 	}
 	return false;

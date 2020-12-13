@@ -76,8 +76,8 @@ void importPresetCB(Fl_Widget*, MyWindow* mw)
 		fl_file_chooser("Pick control point preset", "*.{preset}", "../MeshDeformation/Models/data/presets/");
 
 	if (fname) {
-		mw->myView->gl_mesh->importControlPoints(fname);
-		mw->damageMe();
+		mw->myView->gl_mesh->importPreset(fname);
+		mw->guiView->damage(1);
 	}
 }
 void exportPresetCB(Fl_Widget*, MyWindow* mw)
@@ -86,8 +86,7 @@ void exportPresetCB(Fl_Widget*, MyWindow* mw)
 		fl_file_chooser("Pick control point preset", "*.{preset}", "../MeshDeformation/Models/data/presets/output.preset");
 
 	if (fname) {
-		mw->myView->gl_mesh->exportControlPoints(fname);
-		mw->damageMe();
+		mw->myView->gl_mesh->exportPreset(fname);
 	}
 }
 
@@ -98,6 +97,7 @@ void importCB(Fl_Widget*, MyWindow* mw)
 	if (fname) {
 		mw->myView->gl_mesh->Init(fname);
 		mw->damageMe();
+		mw->guiView->damage(1);
 	}
 }
 
