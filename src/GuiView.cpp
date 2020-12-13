@@ -210,7 +210,7 @@ MyMesh::Point GuiView::GetWorldPos(int mx, int my)
 	glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
 	glm::vec4 worldPos = invVP * screenPos;
 
-	return MyMesh::Point(worldPos[0], worldPos[1], worldPos[2]);
+	return MyMesh::Point(worldPos[0], worldPos[1], 0);
 }
 
 //************************************************************************

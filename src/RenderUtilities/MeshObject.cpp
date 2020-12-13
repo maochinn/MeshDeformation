@@ -573,6 +573,7 @@ void MyMesh::Step2()
 
 GLMesh::GLMesh()
 {
+	current_key = MyMesh::Point(0, 0, 0);
 	/*
 	sc = new serverController();
 	sc->Stop();
@@ -592,7 +593,6 @@ bool GLMesh::Init(std::string fileName)
 
 	mesh.clear();
 	keyPoints.clear();
-	current_key = MyMesh::Point(0, 0, 0);
 
 	if (filetype == "bmp" || filetype == "jpg" || filetype == "png") {
 		success = Load2DImage(fileName);
@@ -694,12 +694,11 @@ void GLMesh::renderControlPoints()
 
 void GLMesh::renderKeyPoints()
 {
-	glPointSize(11);
+	glPointSize(15);
 	glEnable(GL_POINT_SMOOTH);
 	glBegin(GL_POINTS);
 
 	glColor3d(0.05, 0.05, 0.9);
-
 	for (size_t i = 0; i < keyPoints.size(); i++) {
 		if (i != select_k_id) {
 			glVertex3f(keyPoints[i][0], keyPoints[i][1], keyPoints[i][2]);
@@ -711,7 +710,11 @@ void GLMesh::renderKeyPoints()
 		glColor3d(0.9, 0.9, 0);
 		glVertex3f(keyPoints[select_k_id][0], keyPoints[select_k_id][1], keyPoints[select_k_id][2]);
 	}
+	glEnd();
 
+	
+	glPointSize(11);
+	glBegin(GL_POINTS);
 	// draw current key
 	glColor3d(0.9, 0.05, 0.05);
 	glVertex3f(current_key[0], current_key[1], current_key[2]);
@@ -748,7 +751,9 @@ void GLMesh::dragControlPoint(MyMesh::Point p)
 		return;
 
 	this->mesh.controlPoints[select_id].c = p;
-
+	if (select_k_id != -1) {
+		keyData[select_k_id][select_id] = p;
+	}
 	this->mesh.Compute(select_id);
 	UpdateShader();
 }
@@ -784,7 +789,7 @@ void GLMesh::addKeyPoint(MyMesh::Point p)
 void GLMesh::selectKeyPoint(MyMesh::Point p)
 {
 	select_k_id = -1;
-	float min_d = 0.5;
+	float min_d = 0.4;
 
 	float d = (current_key - p).length();
 	if (d < min_d) {
