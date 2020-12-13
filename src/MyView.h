@@ -84,8 +84,6 @@ public:
 
 	//bool do_pick = false;
 	//bool is_picking = false;
-	int pick_x;
-	int pick_y;
 
 	Shader* commom_shader = nullptr;
 	UBO* commom_matrices = nullptr;

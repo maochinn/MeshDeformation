@@ -20,6 +20,8 @@
 
 #include "MeshObject.h"
 
+#include "..\server.h"
+
 #include <fstream>
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel           CGAL_K;
@@ -309,7 +311,7 @@ void MyMesh::select(unsigned int face_ID, MyMesh::Point p)
 	cp.o = cp.w[0] * p0 + cp.w[1] * p1 + cp.w[2] * p2;
 	cp.c = cp.w[0] * dp0 + cp.w[1] * dp1 + cp.w[2] * dp2;
 
-	std::cout << cp.o << std::endl;
+	//std::cout << cp.o << std::endl;
 	//cp.c = MyMesh::Point(0,0,0);
 
 	AddControlPoint(cp);
@@ -434,14 +436,9 @@ void MyMesh::Compilation()
 
 }
 
-unsigned int MyMesh::FindControlPoint(MyMesh::Point, double)
-{
-	return 0;
-}
-
 void MyMesh::Compute(unsigned int id)
 {
-	std::cout << id << std::endl;
+	//std::cout << id << std::endl;
 
 	if (id == -1) {
 		std::cout << "YOYYO" << std::endl;
@@ -574,25 +571,28 @@ void MyMesh::Step2()
 
 #pragma region GLMesh
 
-#include "..\server.h"
-serverController g_sc;
-
 GLMesh::GLMesh()
 {
-	/*g_sc.Stop();
+	/*
+	sc = new serverController();
+	sc->Stop();
 	std::function<void(char*, int)> callback = [this](char* buffer, int length) { this->socketCallback(buffer, length); };
-	g_sc.Run(callback);*/
+	sc->Run(callback);*/
 }
 
 GLMesh::~GLMesh()
 {
+	/*sc->Stop();*/
 }
+
 bool GLMesh::Init(std::string fileName)
 {
 	std::string filetype = fileName.substr(fileName.find_last_of(".") + 1);
 	bool success = false;
 
 	mesh.clear();
+	keyPoints.clear();
+	current_key = MyMesh::Point(0, 0, 0);
 
 	if (filetype == "bmp" || filetype == "jpg" || filetype == "png") {
 		success = Load2DImage(fileName);
@@ -692,19 +692,40 @@ void GLMesh::renderControlPoints()
 	//glDisable(GL_PROGRAM_POINT_SIZE);
 }
 
+void GLMesh::renderKeyPoints()
+{
+	glPointSize(11);
+	glEnable(GL_POINT_SMOOTH);
+	glBegin(GL_POINTS);
+
+	glColor3d(0.05, 0.05, 0.9);
+
+	for (size_t i = 0; i < keyPoints.size(); i++) {
+		if (i != select_k_id) {
+			glVertex3f(keyPoints[i][0], keyPoints[i][1], keyPoints[i][2]);
+		}
+	}
+
+	// draw select point
+	if (select_k_id != -1) {
+		glColor3d(0.9, 0.9, 0);
+		glVertex3f(keyPoints[select_k_id][0], keyPoints[select_k_id][1], keyPoints[select_k_id][2]);
+	}
+
+	// draw current key
+	glColor3d(0.9, 0.05, 0.05);
+	glVertex3f(current_key[0], current_key[1], current_key[2]);
+
+	glEnd();
+	glDisable(GL_POINT_SMOOTH);
+}
+
 void GLMesh::select(unsigned int tri_ID, MyMesh::Point p)
 {
 	this->mesh.select(tri_ID, p);
 }
 
-void GLMesh::remove_selected()
-{
-	if (validID(select_id)) {
-		mesh.RemoveControlPoint(select_id);
-	}
-	select_id = -1;
-}
-
+// control points
 void GLMesh::selectControlPoint(MyMesh::Point p)
 {
 	select_id = -1;
@@ -732,12 +753,131 @@ void GLMesh::dragControlPoint(MyMesh::Point p)
 	UpdateShader();
 }
 
+void GLMesh::remove_selected()
+{
+	if (validID(select_id)) {
+		mesh.RemoveControlPoint(select_id);
+	}
+	select_id = -1;
+}
+
+
+// keypoints
+void GLMesh::addKeyPoint(MyMesh::Point p)
+{
+	std::vector<MyMesh::Point> cps;
+	
+	size_t n_controlPoints = this->mesh.controlPoints.size();
+	for (size_t i = 0; i < n_controlPoints; i++) {
+		MyMesh::ControlPoint& cp = this->mesh.controlPoints[i];
+		cps.push_back(cp.c);
+	}
+
+	p[0] = int(p[0]);
+	p[1] = int(p[1]);
+	p[2] = int(p[2]);
+
+	keyPoints.push_back(p);
+	keyData.push_back(cps);
+
+}
+void GLMesh::selectKeyPoint(MyMesh::Point p)
+{
+	select_k_id = -1;
+	float min_d = 0.5;
+
+	float d = (current_key - p).length();
+	if (d < min_d) {
+		min_d = d;
+		select_k_id = -1;
+		return;
+	}
+
+	for (size_t i = 0; i < keyPoints.size(); i++) {
+		MyMesh::Point& kp = keyPoints[i];
+		d = (kp - p).length();
+		if (d < min_d) {
+			min_d = d;
+			select_k_id = i;
+		}
+	}
+
+	if (select_k_id != -1) {
+		size_t n_controlPoints = this->mesh.controlPoints.size();
+
+		for (size_t j = 0; j < n_controlPoints; j++) {
+			MyMesh::ControlPoint& cp = this->mesh.controlPoints[j];
+			cp.c = keyData[select_k_id][j];
+		}
+		mesh.Compute(0);
+		UpdateShader();
+	}
+	
+}
+void GLMesh::dragKeyPoint(MyMesh::Point p)
+{
+	if (select_k_id == -1) {
+		current_key = p;
+		Interpolate();
+	}
+	else {
+		keyPoints[select_k_id][0] = int(p[0]);
+		keyPoints[select_k_id][1] = int(p[1]);
+		keyPoints[select_k_id][2] = int(p[2]);
+	}
+}
+void GLMesh::removeKeyPoint()
+{
+	if (select_k_id != -1) {
+		keyPoints.erase(keyPoints.begin() + select_k_id);
+	}
+	select_k_id = -1;
+}
+
+void GLMesh::Interpolate()
+{
+	size_t n_controlPoints = this->mesh.controlPoints.size();
+	size_t n_keyPoints = keyPoints.size();
+
+	if (n_controlPoints == 0 || n_keyPoints == 0) {
+		return;
+	}
+
+	float weight_sum = 0;
+	float epsilon = 0.0001f;
+	for (size_t j = 0; j < n_controlPoints; j++) {
+		MyMesh::ControlPoint& cp = this->mesh.controlPoints[j];
+		cp.c = MyMesh::Point(0, 0, 0);
+	}
+
+	for (size_t i = 0; i < n_keyPoints; i++) {
+		MyMesh::Point& kp = keyPoints[i];
+		float weight = 1.0 / ((kp - current_key).sqrnorm() + epsilon);
+		weight_sum += weight;
+		for (size_t j = 0; j < n_controlPoints; j++) {
+			MyMesh::ControlPoint& cp = this->mesh.controlPoints[j];
+			cp.c += (keyData[i][j] * weight);
+		}
+	}
+
+	for (size_t j = 0; j < n_controlPoints; j++) {
+		MyMesh::ControlPoint& cp = this->mesh.controlPoints[j];
+		cp.c /= weight_sum;
+	}
+
+	mesh.Compute(0);
+	UpdateShader();
+}
+
+#pragma region Connection
 void GLMesh::socketCallback(char* buffer, int length)
 {
 	if (is_decoding)
 		return;
 
 	is_decoding = true;
+
+	float scale_up = 1.4f;
 
 	float x, y;
 	int idx = 0;
@@ -751,8 +891,8 @@ void GLMesh::socketCallback(char* buffer, int length)
 		memcpy(&y, y_pos, sizeof(float));
 
 		// x,y is [0 , 1]
-		mesh.controlPoints[N_C-1-idx].c[0] = (x * 2 - 1) * SIZE;
-		mesh.controlPoints[N_C-1-idx].c[2] = -(y * 2 - 1) * SIZE;
+		mesh.controlPoints[N_C-1-idx].c[0] = (x * 2 - 1) * SIZE * scale_up;
+		mesh.controlPoints[N_C-1-idx].c[2] = -(y * 2 - 1) * SIZE * scale_up;
 
 		//std::cout << x << ", " << y << ", "<< mesh.controlPoints[N_C - 1 - idx].c[0] << ", " << mesh.controlPoints[N_C - 1 - idx].c[2] << std::endl;
 	}
@@ -770,12 +910,75 @@ void GLMesh::checkUpdate()
 		UpdateShader();
 	}
 }
+#pragma endregion
 
+
+#pragma region Utilities
 bool GLMesh::validID(unsigned int faceID)
 {
 	return (faceID < mesh.n_faces());
 }
 
+void GLMesh::LoadToShader()
+{
+	std::vector<MyMesh::Point> vertices;
+	std::vector<MyMesh::Normal> normals;
+	for (MyMesh::VertexIter v_it = mesh.vertices_begin(); v_it != mesh.vertices_end(); ++v_it)
+	{
+		vertices.push_back(mesh.point(*v_it));
+		normals.push_back(mesh.normal(*v_it));
+	}
+	std::vector<unsigned int> indices;
+	for (MyMesh::FaceIter f_it = mesh.faces_begin(); f_it != mesh.faces_end(); ++f_it)
+		for (MyMesh::FaceVertexIter fv_it = mesh.fv_iter(*f_it); fv_it.is_valid(); ++fv_it)
+			indices.push_back(fv_it->idx());
+
+	LoadToShader(vertices, normals, indices);
+}
+void GLMesh::LoadToShader(
+	std::vector<MyMesh::Point>& vertices,
+	std::vector<MyMesh::Normal>& normals,
+	std::vector<unsigned int>& indices)
+{
+	if (!vertices.empty()) {
+		glBindBuffer(GL_ARRAY_BUFFER, this->vao.vbo[0]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(MyMesh::Point) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+	}
+	if (!normals.empty()) {
+		glBindBuffer(GL_ARRAY_BUFFER, this->vao.vbo[1]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(MyMesh::Normal) * normals.size(), &normals[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+	}
+	if (!indices.empty()) {
+		this->vao.element_amount = indices.size();
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vao.ebo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indices.size(), &indices[0], GL_STATIC_DRAW);
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
+void GLMesh::UpdateShader() {
+	std::vector<MyMesh::Normal> normals;
+	std::vector<unsigned int> indices;
+	LoadToShader(mesh.deformed_vertices, normals, indices);
+}
+
+void GLMesh::resetMesh()
+{
+	current_key = MyMesh::Point(0, 0, 0);
+	this->mesh.Reset();
+	std::vector<MyMesh::Normal> normals;
+	std::vector<unsigned int> indices;
+	LoadToShader(mesh.deformed_vertices, normals, indices);
+}
+
+#pragma endregion
+
+#pragma region IO
 typedef CGAL::Delaunay_mesher_2<CGAL_CDT, CGAL_Criteria> Mesher;
 bool GLMesh::Load2DImage(std::string fileName)
 {
@@ -1016,54 +1219,6 @@ bool GLMesh::LoadMesh(std::string fileName)
 	return false;
 }
 
-void GLMesh::LoadToShader()
-{
-	std::vector<MyMesh::Point> vertices;
-	std::vector<MyMesh::Normal> normals;
-	for (MyMesh::VertexIter v_it = mesh.vertices_begin(); v_it != mesh.vertices_end(); ++v_it)
-	{
-		vertices.push_back(mesh.point(*v_it));
-		normals.push_back(mesh.normal(*v_it));
-	}
-	std::vector<unsigned int> indices;
-	for (MyMesh::FaceIter f_it = mesh.faces_begin(); f_it != mesh.faces_end(); ++f_it)
-		for (MyMesh::FaceVertexIter fv_it = mesh.fv_iter(*f_it); fv_it.is_valid(); ++fv_it)
-			indices.push_back(fv_it->idx());
-
-	LoadToShader(vertices, normals, indices);
-}
-void GLMesh::LoadToShader(
-	std::vector<MyMesh::Point>& vertices,
-	std::vector<MyMesh::Normal>& normals,
-	std::vector<unsigned int>& indices)
-{
-	if (!vertices.empty()) {
-		glBindBuffer(GL_ARRAY_BUFFER, this->vao.vbo[0]);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(MyMesh::Point) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(0);
-	}
-	if (!normals.empty()) {
-		glBindBuffer(GL_ARRAY_BUFFER, this->vao.vbo[1]);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(MyMesh::Normal) * normals.size(), &normals[0], GL_STATIC_DRAW);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(1);
-	}
-	if (!indices.empty()) {
-		this->vao.element_amount = indices.size();
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vao.ebo);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indices.size(), &indices[0], GL_STATIC_DRAW);
-	}
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-}
-
-void GLMesh::UpdateShader() {
-	std::vector<MyMesh::Normal> normals;
-	std::vector<unsigned int> indices;
-	LoadToShader(mesh.deformed_vertices, normals, indices);
-}
-
 void GLMesh::LoadTexCoordToShader()
 {
 	if (mesh.has_vertex_texcoords2D())
@@ -1085,14 +1240,6 @@ void GLMesh::LoadTexCoordToShader()
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 	}
-}
-
-void GLMesh::resetMesh()
-{
-	this->mesh.Reset();
-	std::vector<MyMesh::Normal> normals;
-	std::vector<unsigned int> indices;
-	LoadToShader(mesh.deformed_vertices, normals, indices);
 }
 
 bool GLMesh::exportMesh(std::string filename)
@@ -1213,5 +1360,7 @@ bool GLMesh::exportControlPoints(std::string fname)
 	}
 	return false;
 }
+
+#pragma endregion
 
 #pragma endregion

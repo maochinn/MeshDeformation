@@ -38,11 +38,13 @@ add_executable(MeshDeformation
     ${SRC_DIR}CallBack.h
     ${SRC_DIR}server.h
     ${SRC_DIR}MyView.h
+    ${SRC_DIR}GuiView.h
     ${SRC_DIR}MyWindow.h
 
     ${SRC_DIR}main.cpp
     ${SRC_DIR}server.cpp
     ${SRC_DIR}MyView.cpp
+    ${SRC_DIR}GuiView.cpp
     ${SRC_DIR}MyWindow.cpp
 
     ${SRC_SHADER}

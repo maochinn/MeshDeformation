@@ -25,7 +25,7 @@ class LM_detector():
             image = cv2.resize(image, (int(w / scale), int(h / scale)))
 
         h, w, c = image.shape
-        norm_scale = 1.2 / max(h, w)
+        norm_scale = 1 / max(h, w)
 
         # torch
         detected_faces = self.fa.face_detector.detect_from_image(image[..., ::-1].copy())

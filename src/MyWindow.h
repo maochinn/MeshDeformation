@@ -43,6 +43,7 @@
 
 // other things we just deal with as pointers, to avoid circular references
 class MyView;
+class GuiView;
 
 // if we're also making the sample solution, then we need to know 
 // about the stuff we don't tell students
@@ -65,6 +66,7 @@ public:
 
 	// the widgets that make up the Window
 	MyView* myView;
+	GuiView* guiView;
 
 	Fl_Group* widgets;	// all widgets, grouped for resizing ease
 

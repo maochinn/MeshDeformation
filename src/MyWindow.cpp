@@ -36,8 +36,8 @@
 
 #include "MyWindow.h"
 #include "MyView.h"
+#include "GuiView.h"
 #include "CallBack.h"
-
 
 
 //************************************************************************
@@ -112,7 +112,17 @@ MyWindow(const int x, const int y)
 		importPreset->callback((Fl_Callback*)importPresetCB, this);
 		Fl_Button* exportPreset = new Fl_Button(705, pty, 90, 18, "Export Preset");
 		exportPreset->callback((Fl_Callback*)exportPresetCB, this);
-		pty += 25;
+		pty += 65;
+
+		guiView = new GuiView(600, pty, 196, 196);
+		guiView->mw = this;
+		pty += 201;
+
+		Fl_Button* importKey = new Fl_Button(605, pty, 90, 18, "Import Keys");
+		//importKey->callback((Fl_Callback*)importPresetCB, this);
+		Fl_Button* exportKey = new Fl_Button(705, pty, 90, 18, "Export Keys");
+		//exportKey->callback((Fl_Callback*)exportPresetCB, this);
+		pty += 35;
 
 		/*Fl_Button* Simplification = new Fl_Button(605, pty, 60, 20, "Simplification");
 		Simplification->callback((Fl_Callback*)simplificationCB, this);

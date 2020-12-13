@@ -8,7 +8,9 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
-# include "BufferObject.h"
+#include "BufferObject.h"
+
+class serverController;
 
 typedef OpenMesh::TriMesh_ArrayKernelT<>  TriMesh;
 
@@ -40,8 +42,6 @@ public:
 	void AddControlPoints(std::vector<ControlPoint>&);
 	void RemoveControlPoint(unsigned int);
 	void Compilation();
-
-	unsigned int FindControlPoint(MyMesh::Point, double);
 
 	void Compute(unsigned int);
 	void Step1();
@@ -82,34 +82,56 @@ public:
 	float SIZE = 250;
 
 	bool Init(std::string fileName);
-
 	void resetMesh();
-	bool exportMesh(std::string fileName);
 
+	// i / o
+	bool exportMesh(std::string fileName);
+	// control point io
 	bool importControlPoints(std::string fname);
 	bool exportControlPoints(std::string fname);
 
+	// rendering
 	void renderMesh();
 	void renderSelectedMesh();
-
 	void renderControlPoints();
+	void renderKeyPoints();
 
+	// select triangle and add constraint
 	void select(unsigned int, MyMesh::Point);
-	void remove_selected();
 
+	// control points control
 	unsigned int select_id = -1;
 	void selectControlPoint(MyMesh::Point);
 	void dragControlPoint(MyMesh::Point);
+	void remove_selected();
 
+
+	// keypoints control
+	unsigned int select_k_id = -1;
+	MyMesh::Point current_key;
+	void addKeyPoint(MyMesh::Point);
+	void selectKeyPoint(MyMesh::Point);
+	void dragKeyPoint(MyMesh::Point);
+	void removeKeyPoint();
+	void Interpolate();
+
+	// connetion
 	bool is_changed[1] = { false };
 	bool is_decoding = false;
 	void socketCallback(char* buffer, int length);
 	void checkUpdate();
 
+	// utilities
 	bool validID(unsigned int);
+
 private:
 	MyMesh mesh;
 	VAO vao;
+
+	serverController* sc;
+
+	std::vector<std::vector<MyMesh::Point>> keyData;
+	std::vector<MyMesh::Point> keyPoints;
 
 	bool Load2DImage(std::string fileName);
 	bool Load2DModel(std::string fileName);
@@ -119,7 +141,6 @@ private:
 		std::vector<MyMesh::Point>& vertices,
 		std::vector<MyMesh::Normal>& normals,
 		std::vector<unsigned int>& indices);
-
 	void UpdateShader();
 	void LoadTexCoordToShader();
 };
