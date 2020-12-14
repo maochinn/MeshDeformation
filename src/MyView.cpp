@@ -248,7 +248,6 @@ void MyView::draw()
 	glLoadIdentity();
 	setProjection();		// put the code to set up matrices here
 	glEnable(GL_DEPTH_TEST);
-
 	//
 	setUBO();
 	glBindBufferRange(GL_UNIFORM_BUFFER, /*binding point*/0, this->commom_matrices->ubo, 0, this->commom_matrices->size);
@@ -260,22 +259,25 @@ void MyView::draw()
 	this->commom_shader->Use();
 
 	this->gl_mesh->checkUpdate();
-
+	
 	glUniformMatrix4fv(glGetUniformLocation(this->commom_shader->Program, "u_model"), 1, GL_FALSE, &model_matrix[0][0]);
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.941f, .25f, .25f)[0]);
 	this->gl_mesh->renderMesh();
-	glDisable(GL_DEPTH_TEST);
 	
+	glDisable(GL_DEPTH_TEST);
+
 	//if (weight_mode) {
 		glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.25f, .941f, .25f)[0]);
 		this->gl_mesh->renderSelectedMesh();
 	//}
+
 
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.26f, .181f, .172f)[0]);
 	glLineWidth(1.38f);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	this->gl_mesh->renderMesh();
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
 
 
 	//unbind shader(switch to fixed pipeline)

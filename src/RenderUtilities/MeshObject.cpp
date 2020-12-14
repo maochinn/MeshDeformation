@@ -484,9 +484,22 @@ void MyMesh::Compute(unsigned int id)
 	Step1();
 	Step2();
 
-	for (int i = 0; i < N_V; i++)
+
+	for (MyMesh::VertexIter v_it = vertices_begin(); v_it != vertices_end(); ++v_it)
 	{
-		deformed_vertices[i] = MyMesh::Point(V2x(i), 0, V2y(i));
+		float depth = 0;
+
+		MyMesh::Point d0(V2x(v_it->idx()), 0, V2y(v_it->idx()));
+		MyMesh::Point p0 = point(v_it);
+
+		for (VertexVertexIter vv_it = vv_iter(v_it); vv_it.is_valid(); ++vv_it) {
+
+			MyMesh::Point d1(V2x(vv_it->idx()), 0, V2y(vv_it->idx()));
+			depth += (point(vv_it) - p0).normalized().dot((d1 - d0).normalized());
+		}
+
+		d0[1] = depth;
+		deformed_vertices[v_it->idx()] = d0;
 	}
 }
 
