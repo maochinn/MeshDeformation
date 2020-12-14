@@ -14,6 +14,10 @@ class serverController;
 
 typedef OpenMesh::TriMesh_ArrayKernelT<>  TriMesh;
 
+
+#define SELECT_TYPE_CONTROL_POINT 0
+#define SELECT_TYPE_WEIGHT 1
+
 class MyMesh : public TriMesh
 {
 public:
@@ -43,6 +47,8 @@ public:
 	void RemoveControlPoint(unsigned int);
 	void Compilation();
 
+	void SetEdgeWeights(std::set<unsigned int>&);
+
 	void Compute(unsigned int);
 	void Step1();
 	void Step2();
@@ -70,6 +76,7 @@ private:
 
 	OpenMesh::EPropHandleT<Eigen::MatrixXd> prop_G;
 	OpenMesh::EPropHandleT<double> prop_W;
+	OpenMesh::EPropHandleT<double> prop_W_C;
 
 };
 
@@ -98,13 +105,15 @@ public:
 
 	// select triangle and add constraint
 	void select(unsigned int, MyMesh::Point);
+	void selectTri(unsigned int, bool);
+
+	void applyTriangleWeights();
 
 	// control points control
 	unsigned int select_id = -1;
 	void selectControlPoint(MyMesh::Point);
 	void dragControlPoint(MyMesh::Point);
 	void remove_selected();
-
 
 	// keypoints control
 	unsigned int select_k_id = -1;
@@ -132,6 +141,9 @@ private:
 
 	std::vector<std::vector<MyMesh::Point>> keyData;
 	std::vector<MyMesh::Point> keyPoints;
+
+	std::set<unsigned int> constrainedTriIDs;
+	bool edge_weight_modified = false;
 
 	bool Load2DImage(std::string fileName);
 	bool Load2DModel(std::string fileName);

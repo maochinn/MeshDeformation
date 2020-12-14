@@ -66,8 +66,9 @@ MyWindow(const int x, const int y)
 		renderMeshButton = new Fl_Button(605, pty, 60, 20, "Mesh");
 		togglify(renderMeshButton, 1);
 
-		renderSkeletonButton = new Fl_Button(730, pty, 65, 20, "Skeleton");
-		togglify(renderSkeletonButton, 0);
+		renderWeightButton = new Fl_Button(730, pty, 65, 20, "Weight");
+		togglify(renderWeightButton, 0);
+		renderWeightButton->callback((Fl_Callback*)toggleWeightCB, this);
 
 		pty += 25;
 

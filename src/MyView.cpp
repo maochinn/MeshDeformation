@@ -91,9 +91,16 @@ int MyView::handle(int event)
 	// then we're done
 	// note: the arcball only gets the event if we're in world view
 	if (mw->world_cam->value())
-		if (arcball.handle(event))
+		if (arcball.handle(event)) {
+			view_changed();
 			return 1;
+		}
 
+	if (weight_mode) {
+		if (handleWeightMode(event)) {
+			return 1;
+		}
+	}
 	// remember what button was used
 	static int last_push;
 
@@ -108,7 +115,8 @@ int MyView::handle(int event)
 		//		pick_x = Fl::event_x();
 		//		pick_y = Fl::event_y();
 		//	}
-		/*else */if (last_push == FL_RIGHT_MOUSE)
+		/*else */
+		if (last_push == FL_RIGHT_MOUSE)
 			doSelect(Fl::event_x(), Fl::event_y());
 
 		damage(1);
@@ -139,6 +147,7 @@ int MyView::handle(int event)
 
 		// in order to get keyboard events, we need to accept focus
 	case FL_FOCUS:
+		view_changed();
 		return 1;
 
 		// every time the mouse enters this window, aggressively take focus
@@ -150,6 +159,9 @@ int MyView::handle(int event)
 		top_cam_range += (Fl::event_dy() < 0) ? -0.01f : 0.01f;
 		if (top_cam_range <= 0.0f)
 			top_cam_range = 0.001f;
+
+		view_changed();
+
 		return 1;
 		break;
 
@@ -253,8 +265,12 @@ void MyView::draw()
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.941f, .25f, .25f)[0]);
 	this->gl_mesh->renderMesh();
 	glDisable(GL_DEPTH_TEST);
-	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.25f, .941f, .25f)[0]);
-	//this->gl_mesh->renderSelectedMesh();
+	
+	//if (weight_mode) {
+		glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.25f, .941f, .25f)[0]);
+		this->gl_mesh->renderSelectedMesh();
+	//}
+
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.26f, .181f, .172f)[0]);
 	glLineWidth(1.38f);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -278,107 +294,59 @@ void MyView::resize(int x, int y, int w, int h)
 
 void MyView::doPick(int mx, int my)
 {
-	//is_picking = true;
-	//do_pick = false;
-
-	// bind picking
-	this->picking_shader->Use();
-	this->picking_tex.EnableWriting();
-	glViewport(0, 0, w(), h());
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// prepare for projection
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	setProjection();		// put the code to set up matrices here
-
-	//
-	setUBO();
-	glBindBufferRange(GL_UNIFORM_BUFFER, /*binding point*/0, this->commom_matrices->ubo, 0, this->commom_matrices->size);
-
-	// model position (0,0,0)
-	glm::mat4 model_matrix = glm::mat4();
-	glUniformMatrix4fv(glGetUniformLocation(this->picking_shader->Program, "u_model"), 1, GL_FALSE, &model_matrix[0][0]);
-
-	this->gl_mesh->renderMesh();
-
-	this->picking_tex.DisableWriting();
-
-	glUseProgram(0);
-
+	UpdatePickTextrue();
 	GLuint PrimID = this->picking_tex.ReadPixel(mx, h() - my - 1) - 1;
 	if (this->gl_mesh->validID(PrimID)) {
-		std::cout << PrimID << std::endl;
-
-		// these positions must be in range [-1, 1] (!!!), not [0, width] and [0, height]
-		float mouseX = mx / (w() * 0.5f) - 1.0f;
-		float mouseY = my / (h() * 0.5f) - 1.0f;
-
-		glm::mat4 proj, view;
-		glGetFloatv(GL_MODELVIEW_MATRIX, &view[0][0]);
-		glGetFloatv(GL_PROJECTION_MATRIX, &proj[0][0]);
-
-		glm::mat4 invVP = glm::inverse(proj * view);
-		glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
-		glm::vec4 worldPos = invVP * screenPos;
-
-		std::cout << worldPos.x << " " << worldPos.y << " " << worldPos.z << " " << worldPos.w << std::endl;
-
-		this->gl_mesh->select(PrimID, MyMesh::Point(worldPos.x, 0 , worldPos.z));
+		//std::cout << PrimID << std::endl;
+		this->gl_mesh->select(PrimID, getWorldPos(mx, my));
 	}
 	else {
 		std::cout << "Nope" << std::endl;
 	}
+}
 
-	//is_picking = false;
+void MyView::doPickWeightTri(int mx, int my, bool state)
+{
+	UpdatePickTextrue();
+	GLuint PrimID = this->picking_tex.ReadPixel(mx, h() - my - 1) - 1;
+	if (this->gl_mesh->validID(PrimID)) {
+		//std::cout << PrimID << std::endl;
+		this->gl_mesh->selectTri(PrimID, state);
+	}
 }
 
 void MyView::doSelect(int mx, int my)
 {
-	float mouseX = mx / (w() * 0.5f) - 1.0f;
-	float mouseY = my / (h() * 0.5f) - 1.0f;
-
-	glPushMatrix();
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	setProjection();
-
-	glm::mat4 proj, view;
-	glGetFloatv(GL_MODELVIEW_MATRIX, &view[0][0]);
-	glGetFloatv(GL_PROJECTION_MATRIX, &proj[0][0]);
-
-	glm::mat4 invVP = glm::inverse(proj * view);
-	glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
-	glm::vec4 worldPos = invVP * screenPos;
-
-	this->gl_mesh->selectControlPoint(MyMesh::Point(worldPos.x, 0, worldPos.z));
-
-	glPopMatrix();
+	this->gl_mesh->selectControlPoint(getWorldPos(mx, my));
 }
 
 void MyView::doDrag(int mx, int my)
+{
+	this->gl_mesh->dragControlPoint(getWorldPos(mx, my));
+	view_changed();
+}
+
+MyMesh::Point MyView::getWorldPos(int mx, int my)
 {
 	float mouseX = mx / (w() * 0.5f) - 1.0f;
 	float mouseY = my / (h() * 0.5f) - 1.0f;
 
 	glPushMatrix();
-
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	setProjection();
-
 	glm::mat4 proj, view;
 	glGetFloatv(GL_MODELVIEW_MATRIX, &view[0][0]);
 	glGetFloatv(GL_PROJECTION_MATRIX, &proj[0][0]);
+	glPopMatrix();
 
 	glm::mat4 invVP = glm::inverse(proj * view);
 	glm::vec4 screenPos = glm::vec4(mouseX, -mouseY, 1.0f, 1.0f);
 	glm::vec4 worldPos = invVP * screenPos;
 
-	this->gl_mesh->dragControlPoint(MyMesh::Point(worldPos.x, 0, worldPos.z));
+	//std::cout << worldPos.x << " " << worldPos.y << " " << worldPos.z << " " << worldPos.w << std::endl;
 
-	glPopMatrix();
+	return MyMesh::Point(worldPos.x, 0, worldPos.z);
 }
 
 //************************************************************************
@@ -439,4 +407,70 @@ void MyView::setUBO()
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), &view_matrix[0][0]);
 	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), sizeof(glm::mat4), &glm::inverse(view_matrix)[0][0]);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+void MyView::UpdatePickTextrue()
+{
+	if (tex_is_outdated)
+	{
+		// bind picking
+		this->picking_shader->Use();
+		this->picking_tex.EnableWriting();
+		glViewport(0, 0, w(), h());
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// prepare for projection
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		setProjection();		// put the code to set up matrices here
+
+		//
+		setUBO();
+		glBindBufferRange(GL_UNIFORM_BUFFER, /*binding point*/0, this->commom_matrices->ubo, 0, this->commom_matrices->size);
+
+		// model position (0,0,0)
+		glm::mat4 model_matrix = glm::mat4();
+		glUniformMatrix4fv(glGetUniformLocation(this->picking_shader->Program, "u_model"), 1, GL_FALSE, &model_matrix[0][0]);
+
+		this->gl_mesh->renderMesh();
+
+		this->picking_tex.DisableWriting();
+
+		glUseProgram(0);
+	}
+	tex_is_outdated = false;
+}
+
+void MyView::setWeightMode(bool mode)
+{
+	if (!mode) {
+		gl_mesh->applyTriangleWeights();
+	}
+	weight_mode = mode;
+}
+
+void MyView::view_changed()
+{
+	//std::cout << "CHANGED\n";
+	tex_is_outdated = true;
+}
+
+bool MyView::handleWeightMode(int e)
+{
+	switch (e) {
+	case FL_DRAG:
+		if (Fl::event_button() == FL_LEFT_MOUSE) {
+			doPickWeightTri(Fl::event_x(), Fl::event_y(), true);
+			damage(1);
+			return true;
+		}
+		else if (Fl::event_button() == FL_RIGHT_MOUSE) {
+			doPickWeightTri(Fl::event_x(), Fl::event_y(), false);
+			damage(1);
+			return true;
+		}
+		break;
+	}
+
+	return true;
 }

@@ -72,7 +72,7 @@ public:
 
 	// utility buttons
 	Fl_Button* renderMeshButton;
-	Fl_Button* renderSkeletonButton;
+	Fl_Button* renderWeightButton;
 
 	// which viewpoint are we drawing from
 	Fl_Button* world_cam;

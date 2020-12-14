@@ -112,6 +112,12 @@ void exportCB(Fl_Widget*, MyWindow* mw)
 	}
 }
 
+void toggleWeightCB(Fl_Widget*, MyWindow* mw)
+{
+	mw->myView->setWeightMode(mw->renderWeightButton->value());
+	mw->damageMe();
+}
+
 void resetCB(Fl_Widget*, MyWindow* mw)
 {
 	mw->myView->gl_mesh->resetMesh();

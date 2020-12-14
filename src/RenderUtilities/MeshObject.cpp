@@ -64,6 +64,7 @@ MyMesh::MyMesh()
 
 	this->add_property(prop_G, "prop_G"); 
 	this->add_property(prop_W, "prop_W");
+	this->add_property(prop_W_C, "prop_W_C");
 }
 
 MyMesh::~MyMesh()
@@ -171,6 +172,7 @@ void MyMesh::preComputeG()
 		}
 
 		this->property(prop_W, e_it) = Weight;
+		this->property(prop_W_C, e_it) = 0;
 	}
 }
 
@@ -209,7 +211,7 @@ void MyMesh::preComputeL1()
 
 		h = h - e_mat * G;
 
-		double Weight = this->property(prop_W, e_it);
+		double Weight = std::max(this->property(prop_W, e_it), this->property(prop_W_C, e_it));
 		h *= Weight;
 
 		int col = vh_from.idx() * 2;
@@ -269,7 +271,7 @@ void MyMesh::preComputeL2()
 		VertexHandle vh_from = from_vertex_handle(heh);
 		VertexHandle vh_to = to_vertex_handle(heh);
 
-		double Weight = this->property(prop_W, e_it);
+		double Weight = std::max(this->property(prop_W, e_it), this->property(prop_W_C, e_it));
 
 		triplet_list_L2.push_back(Eigen::Triplet<double>(row, vh_from.idx(), -1 * Weight));
 		triplet_list_L2.push_back(Eigen::Triplet<double>(row, vh_to.idx(), 1 * Weight));
@@ -436,6 +438,26 @@ void MyMesh::Compilation()
 
 }
 
+void MyMesh::SetEdgeWeights(std::set<unsigned int>& faces)
+{
+	const float W = 90.3f;
+
+	for (auto e_it = this->edges_begin(); e_it != this->edges_end(); ++e_it) {
+		this->property(prop_W_C, e_it) = 0;
+	}
+	for (auto f_it = faces.begin(); f_it != faces.end(); ++f_it) {
+		FaceHandle f_h = face_handle(*f_it);
+
+		for (FaceEdgeIter fe_it = fe_iter(f_h); fe_it.is_valid(); ++fe_it) {
+			this->property(prop_W_C, fe_it) = W;
+		}
+	}
+
+	preComputeL1();
+	preComputeL2();
+	Compilation();
+}
+
 void MyMesh::Compute(unsigned int id)
 {
 	//std::cout << id << std::endl;
@@ -510,7 +532,7 @@ void MyMesh::Step2()
 		HalfedgeHandle heh = halfedge_handle(e_it, 0);
 
 		Eigen::MatrixXd& G = this->property(prop_G, e_it);
-		double Weight = this->property(prop_W, e_it);
+		double Weight = std::max(this->property(prop_W, e_it), this->property(prop_W_C, e_it));
 
 		VertexHandle vh_from = from_vertex_handle(heh);
 		VertexHandle vh_to = to_vertex_handle(heh);
@@ -593,6 +615,8 @@ bool GLMesh::Init(std::string fileName)
 
 	mesh.clear();
 	keyPoints.clear();
+	keyData.clear();
+	constrainedTriIDs.clear();
 
 	if (filetype == "bmp" || filetype == "jpg" || filetype == "png") {
 		success = Load2DImage(fileName);
@@ -646,27 +670,17 @@ void GLMesh::renderMesh()
 }
 void GLMesh::renderSelectedMesh()
 {
-	std::vector<unsigned int> selected_faces;
-	for (const auto& cp : this->mesh.controlPoints)
+	if (!constrainedTriIDs.empty())
 	{
-		unsigned int face_id = cp.fh.idx();
-		if (std::find(selected_faces.begin(), selected_faces.end(), face_id) == selected_faces.end() &&
-			face_id >= 0 && face_id < mesh.n_faces())
-			selected_faces.push_back(face_id);
-	}
-
-	if (!selected_faces.empty())
-	{
-		std::vector<unsigned int*> offsets(selected_faces.size());
-		for (int i = 0; i < offsets.size(); ++i)
+		std::vector<unsigned int*> offsets;
+		for (auto tri_it = constrainedTriIDs.begin(); tri_it != constrainedTriIDs.end(); ++tri_it)
 		{
-			offsets[i] = (GLuint*)(selected_faces[i] * 3 * sizeof(GLuint));
+			unsigned int tri_id = *tri_it;
+			offsets.push_back((GLuint*)(tri_id * 3 * sizeof(GLuint)));
 		}
-
-		std::vector<int> count(selected_faces.size(), 3);
-
+		std::vector<int> count(constrainedTriIDs.size(), 3);
 		glBindVertexArray(this->vao.vao);
-		glMultiDrawElements(GL_TRIANGLES, &count[0], GL_UNSIGNED_INT, (const GLvoid**)&offsets[0], selected_faces.size());
+		glMultiDrawElements(GL_TRIANGLES, &count[0], GL_UNSIGNED_INT, (const GLvoid**)&offsets[0], constrainedTriIDs.size());
 		glBindVertexArray(0);
 	}
 }
@@ -726,6 +740,26 @@ void GLMesh::renderKeyPoints()
 void GLMesh::select(unsigned int tri_ID, MyMesh::Point p)
 {
 	this->mesh.select(tri_ID, p);
+}
+
+void GLMesh::selectTri(unsigned int tri_ID, bool state)
+{
+	if (state) {
+		constrainedTriIDs.insert(tri_ID);
+	}
+	else {
+		constrainedTriIDs.erase(tri_ID);
+	}
+
+	edge_weight_modified = true;
+}
+
+void GLMesh::applyTriangleWeights()
+{
+	if(edge_weight_modified)
+		mesh.SetEdgeWeights(constrainedTriIDs);
+
+	edge_weight_modified = false;
 }
 
 // control points

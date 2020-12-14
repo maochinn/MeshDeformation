@@ -63,9 +63,15 @@ public:
 	virtual void draw();
 	virtual void resize(int, int, int, int);
 
+	void setWeightMode(bool);
+	bool handleWeightMode(int);
+
 	void doPick(int, int);
+	void doPickWeightTri(int, int, bool);
 	void doSelect(int, int);
 	void doDrag(int, int);
+
+	MyMesh::Point getWorldPos(int, int);
 
 	// setup the projection - assuming that the projection stack has been
 	// cleared for you
@@ -76,14 +82,18 @@ public:
 
 	//set ubo
 	void setUBO();
+
+	bool tex_is_outdated = true;
+	void view_changed();
+	void UpdatePickTextrue();
+
 public:
+	bool weight_mode = false;
+
 	ArcBallCam		arcball;			// keep an ArcBall for the UI
 	MyWindow* mw;				// The parent of this display window
 
 	float top_cam_range = 0.3f;
-
-	//bool do_pick = false;
-	//bool is_picking = false;
 
 	Shader* commom_shader = nullptr;
 	UBO* commom_matrices = nullptr;
