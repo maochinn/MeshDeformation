@@ -501,7 +501,7 @@ void MyMesh::Compute(unsigned int id)
 			depth += (point(vv_it) - p0).normalized().dot((d1 - d0).normalized());
 		}
 
-		d0[1] = depth;
+		d0[1] = depth + p0.length() * 0.1f;
 		deformed_vertices[v_it->idx()] = d0;
 	}
 }
@@ -1290,6 +1290,12 @@ bool GLMesh::LoadMesh(std::string fileName)
 			//mesh.release_face_normals();
 
 			mesh.Initialization();
+
+			std::string imgname = fileName.substr(0, fileName.size() - 4) + ".jpg";
+			struct stat buffer;
+			if (stat(imgname.c_str(), &buffer) == 0) {
+				texture = new Texture2D(imgname.c_str());
+			}
 		}
 		return true;
 	}
@@ -1328,6 +1334,15 @@ bool GLMesh::exportMesh(std::string filename)
 		{
 			std::cerr << "Cannot write mesh to file : " << filename << std::endl;
 			return false;
+		}
+		else {
+			// sucess
+
+			if (texture != nullptr) {
+				std::string imgname = filename.substr(0, filename.size() - 4) + ".jpg";
+				cv::imwrite(imgname,texture->GetImg());
+			}
+
 		}
 	}
 	catch (std::exception& x)

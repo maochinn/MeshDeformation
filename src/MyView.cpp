@@ -234,6 +234,7 @@ void MyView::draw()
 	// Set up the view port
 	glViewport(0, 0, w(), h());
 
+
 	// clear the window, be sure to clear the Z-Buffer too
 	glClearColor(0.958, 0.909, 0.871, 0);		// background should be blue
 
@@ -241,14 +242,18 @@ void MyView::draw()
 	// it for shadows
 	glClearStencil(0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
 	glEnable(GL_DEPTH);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	// prepare for projection
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	setProjection();		// put the code to set up matrices here
-	glEnable(GL_DEPTH_TEST);
 	//
+
 	setUBO();
 	glBindBufferRange(GL_UNIFORM_BUFFER, /*binding point*/0, this->commom_matrices->ubo, 0, this->commom_matrices->size);
 
@@ -258,31 +263,35 @@ void MyView::draw()
 	//bind shader
 	this->commom_shader->Use();
 
+
 	this->gl_mesh->checkUpdate();
 	
 	glUniformMatrix4fv(glGetUniformLocation(this->commom_shader->Program, "u_model"), 1, GL_FALSE, &model_matrix[0][0]);
-	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.941f, .25f, .25f)[0]);
+	//glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.941f, .25f, .25f)[0]);
+	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(1, 1, 1)[0]);
 
 	this->gl_mesh->renderMesh();
 	
 	glDisable(GL_DEPTH_TEST);
+	glUseProgram(0);
 
-	if (weight_mode) {
-		glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.25f, .941f, .25f)[0]);
+	//if (weight_mode) {
+		//glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.25f, .941f, .25f)[0]);
+		glColor4f(1.0f, 0, 0, 0.4f);
 		this->gl_mesh->renderSelectedMesh();
-	}
+	//}
 
 
-	/*glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.26f, .181f, .172f)[0]);
+	//glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.26f, .181f, .172f)[0]);
+	glColor4f(.26f, .181f, .172f, 0.6f);
 	glLineWidth(1.38f);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	this->gl_mesh->renderMesh();
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);*/
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-
+	glDisable(GL_BLEND);
 
 	//unbind shader(switch to fixed pipeline)
-	glUseProgram(0);
 
 	this->gl_mesh->renderControlPoints();
 	/*if(do_pick)

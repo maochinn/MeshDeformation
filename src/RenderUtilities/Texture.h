@@ -16,11 +16,14 @@ public:
 	};
 
 	Type type;
+	~Texture2D() {
+		glDeleteTextures(1, &this->id);
+		img.release();
+	}
 
 	Texture2D(const char* path, Type texture_type = Texture2D::TEXTURE_DEFAULT):
 		type(texture_type)
 	{
-		cv::Mat img;
 		//cv::imread(path, cv::IMREAD_COLOR).convertTo(img, CV_32FC3, 1 / 255.0f);	//unsigned char to float
 		img = cv::imread(path, cv::IMREAD_COLOR);
 
@@ -47,8 +50,6 @@ public:
 
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, 0);
-
-		img.release();
 	}
 	void bind(GLenum bind_unit)
 	{
@@ -65,7 +66,13 @@ public:
 	GLuint GetID() {
 		return id;
 	}
+
+	cv::Mat GetImg() {
+		return img;
+	}
+
 private:
 	GLuint id;
+	cv::Mat img;
 
 };
