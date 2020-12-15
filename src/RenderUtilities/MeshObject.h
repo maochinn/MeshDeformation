@@ -9,6 +9,7 @@
 #include <Eigen/Sparse>
 
 #include "BufferObject.h"
+#include "Texture.h"
 
 class serverController;
 
@@ -136,6 +137,7 @@ public:
 private:
 	MyMesh mesh;
 	VAO vao;
+	Texture2D* texture = nullptr;
 
 	serverController* sc;
 

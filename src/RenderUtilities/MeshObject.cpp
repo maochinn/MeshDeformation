@@ -58,9 +58,12 @@ MyMesh::MyMesh()
 {
 	request_vertex_normals();
 	request_vertex_status();
-	request_face_status();
+	request_vertex_texcoords2D();
+
 	request_edge_status();
 	request_halfedge_status();
+
+	request_face_status();
 
 	this->add_property(prop_G, "prop_G"); 
 	this->add_property(prop_W, "prop_W");
@@ -631,6 +634,8 @@ bool GLMesh::Init(std::string fileName)
 	keyData.clear();
 	constrainedTriIDs.clear();
 
+	texture = nullptr;
+
 	if (filetype == "bmp" || filetype == "jpg" || filetype == "png") {
 		success = Load2DImage(fileName);
 	}
@@ -663,6 +668,7 @@ bool GLMesh::Init(std::string fileName)
 		glBindVertexArray(0);
 
 		LoadToShader();
+		LoadTexCoordToShader();
 
 		std::cout << "SUCCESS" << std::endl;
 		return true;
@@ -676,9 +682,19 @@ void GLMesh::renderMesh()
 {
 	if (this->vao.element_amount > 0)
 	{
+		glEnable(GL_TEXTURE_2D);
+
+		if (texture != nullptr)
+			texture->bind(0);
+
 		glBindVertexArray(this->vao.vao);
 		glDrawElements(GL_TRIANGLES, this->vao.element_amount, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
+
+		if (texture != nullptr)
+			texture->unbind(0);
+
+		glDisable(GL_TEXTURE_2D);
 	}
 }
 void GLMesh::renderSelectedMesh()
@@ -1035,8 +1051,11 @@ void GLMesh::resetMesh()
 typedef CGAL::Delaunay_mesher_2<CGAL_CDT, CGAL_Criteria> Mesher;
 bool GLMesh::Load2DImage(std::string fileName)
 {
-	cv::Mat img = cv::imread(fileName, 0);
+	cv::Mat rgb_img = cv::imread(fileName);
 
+	cv::Mat	img;
+	cv::cvtColor(rgb_img, img, CV_RGB2GRAY);
+	cv::threshold(img, img, 254, 255, cv::ThresholdTypes::THRESH_BINARY);
 	//cv::Canny(img, edges, 100, 210);
 	//floodFill(edges, cv::Point2i(edges.cols / 2, edges.rows / 2), cv::Scalar(255, 255, 255));
 
@@ -1112,8 +1131,12 @@ bool GLMesh::Load2DImage(std::string fileName)
 	{
 		CGAL_Vertex_handle h = v_it->handle();
 		auto& p = v_it->point();
+
 		OpenMesh::Vec3f v(p.x() * scale, 0, p.y() * scale);
-		v_handles[h] = mesh.add_vertex(v);
+		MyMesh::VertexHandle v_h = mesh.add_vertex(v);
+		mesh.set_texcoord2D(v_h, MyMesh::TexCoord2D(((p.x() + x_offset) / norm_scale) / img.cols, ((1 - p.y() - y_offset) / norm_scale) / img.rows));
+
+		v_handles[h] = v_h;
 	}
 
 	std::vector<MyMesh::VertexHandle> face_vhandles;
@@ -1135,6 +1158,8 @@ bool GLMesh::Load2DImage(std::string fileName)
 	}
 
 	mesh.Initialization();
+
+	texture = new Texture2D(fileName.c_str());
 
 	return true;
 }
@@ -1279,7 +1304,7 @@ void GLMesh::LoadTexCoordToShader()
 		std::vector<MyMesh::TexCoord2D> texCoords;
 		for (MyMesh::VertexIter v_it = mesh.vertices_begin(); v_it != mesh.vertices_end(); ++v_it)
 		{
-			MyMesh::TexCoord2D texCoord = mesh.texcoord2D(*v_it);
+			MyMesh::TexCoord2D texCoord = mesh.texcoord2D(v_it);
 			texCoords.push_back(texCoord);
 		}
 

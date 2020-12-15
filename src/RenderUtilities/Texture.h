@@ -27,20 +27,25 @@ public:
 		this->size.x = img.cols;
 		this->size.y = img.rows;
 
-		//cv::cvtColor(img, img, CV_BGR2RGB);
-
 		glGenTextures(1, &this->id);
-
 		glBindTexture(GL_TEXTURE_2D, this->id);
-		glGenerateMipmap(GL_TEXTURE_2D);
+
+		glPixelStorei(GL_UNPACK_ALIGNMENT, (img.step & 3) ? 1 : 4); //printf("%i %llu ", (mat.step & 3), mat.step / mat.elemSize());
+																		//set length of one complete row in data (doesn't need to equal image.cols)
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, static_cast<GLint>(img.step / img.elemSize()));
+
+
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
 		if(img.type() == CV_8UC3)
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, img.cols, img.rows, 0, GL_BGR, GL_UNSIGNED_BYTE, img.data);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, img.cols, img.rows, 0, GL_BGR, GL_UNSIGNED_BYTE, img.data);
 		else if (img.type() == CV_8UC4)
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, img.cols, img.rows, 0, GL_BGRA, GL_UNSIGNED_BYTE, img.data);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.cols, img.rows, 0, GL_BGRA, GL_UNSIGNED_BYTE, img.data);
+
+		glGenerateMipmap(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 		img.release();
@@ -56,6 +61,10 @@ public:
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 	glm::ivec2 size;
+
+	GLuint GetID() {
+		return id;
+	}
 private:
 	GLuint id;
 
