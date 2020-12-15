@@ -91,6 +91,9 @@ public:
 	bool weight_mode = false;
 
 	ArcBallCam		arcball;			// keep an ArcBall for the UI
+
+	glm::vec3 translation;
+
 	MyWindow* mw;				// The parent of this display window
 
 	float top_cam_range = 0.3f;

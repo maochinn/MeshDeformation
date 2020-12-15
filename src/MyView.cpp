@@ -58,7 +58,7 @@ MyView(int x, int y, int w, int h, const char* l)
 	mode(FL_RGB | FL_ALPHA | FL_DOUBLE | FL_STENCIL);
 
 	//Fl::add_idle(IdleCallback, this);
-
+	translation = glm::vec3(0, 0, 0);
 	resetArcball();
 }
 
@@ -166,12 +166,25 @@ int MyView::handle(int event)
 		break;
 
 	case FL_KEYBOARD:
-		/*int k = Fl::event_key();
-		int ks = Fl::event_state();
-		if (k == 'd') {
+		float speed = 5.0f;
+		switch (Fl::event_key()) {
+		case FL_Down:
+			translation.z -= speed;
+			view_changed();
 			return 1;
-		}*/
-		break;
+		case FL_Up:
+			translation.z += speed;
+			view_changed();
+			return 1;
+		case FL_Left:
+			translation.x -= speed;
+			view_changed();
+			return 1;
+		case FL_Right:
+			translation.x += speed;
+			view_changed();
+			return 1;
+		}
 	}
 
 
@@ -262,7 +275,6 @@ void MyView::draw()
 
 	//bind shader
 	this->commom_shader->Use();
-
 
 	this->gl_mesh->checkUpdate();
 	
@@ -395,7 +407,9 @@ setProjection()
 		glOrtho(-wi, wi, -he, he, 200, -200);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
+		// Use the transformation in the ArcBall
 		glRotatef(-90, 1, 0, 0);
+		glTranslatef(-translation.x, -translation.y, -translation.z);
 	}
 }
 

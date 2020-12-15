@@ -120,6 +120,7 @@ void toggleWeightCB(Fl_Widget*, MyWindow* mw)
 
 void resetCB(Fl_Widget*, MyWindow* mw)
 {
+	mw->myView->translation = glm::vec3(0, 0, 0);
 	mw->myView->gl_mesh->resetMesh();
 	mw->damageMe();
 }
