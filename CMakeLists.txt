@@ -19,7 +19,6 @@ set(SRC_RENDER_UTILITIES
     ${SRC_DIR}RenderUtilities/BufferObject.h
     ${SRC_DIR}RenderUtilities/Shader.h
     ${SRC_DIR}RenderUtilities/Texture.h
-    ${SRC_DIR}RenderUtilities/CubeMap.h
     ${SRC_DIR}RenderUtilities/MeshObject.cpp
     ${SRC_DIR}RenderUtilities/MeshObject.h
     ${SRC_DIR}RenderUtilities/PickingTexture.h)
@@ -36,13 +35,11 @@ add_Definitions("-D_USE_MATH_DEFINES")
 
 add_executable(MeshDeformation
     ${SRC_DIR}CallBack.h
-    ${SRC_DIR}server.h
     ${SRC_DIR}MyView.h
     ${SRC_DIR}GuiView.h
     ${SRC_DIR}MyWindow.h
 
     ${SRC_DIR}main.cpp
-    ${SRC_DIR}server.cpp
     ${SRC_DIR}MyView.cpp
     ${SRC_DIR}GuiView.cpp
     ${SRC_DIR}MyWindow.cpp

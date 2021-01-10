@@ -5,34 +5,11 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-//#include "../CDT/include/CDT.h"
-//#include "../CDT/extras/VerifyTopology.h"
-
-#define CGAL_MESH_2_OPTIMIZER_VERBOSE
-//#define CGAL_MESH_2_OPTIMIZERS_DEBUG
-//#define CGAL_MESH_2_SIZING_FIELD_USE_BARYCENTRIC_COORDINATES
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Constrained_Delaunay_triangulation_2.h>
-#include <CGAL/Delaunay_mesher_2.h>
-#include <CGAL/Delaunay_mesh_face_base_2.h>
-#include <CGAL/Delaunay_mesh_vertex_base_2.h>
-#include <CGAL/Delaunay_mesh_size_criteria_2.h>
-
 #include "MeshObject.h"
 
-#include "..\server.h"
+//#include "..\server.h"
 
 #include <fstream>
-
-typedef CGAL::Exact_predicates_inexact_constructions_kernel           CGAL_K;
-typedef CGAL::Delaunay_mesh_vertex_base_2<CGAL_K>                     CGAL_Vb;
-typedef CGAL::Delaunay_mesh_face_base_2<CGAL_K>                       CGAL_Fb;
-typedef CGAL::Triangulation_data_structure_2<CGAL_Vb, CGAL_Fb>        CGAL_Tds;
-typedef CGAL::Constrained_Delaunay_triangulation_2<CGAL_K, CGAL_Tds>  CGAL_CDT;
-typedef CGAL::Delaunay_mesh_size_criteria_2<CGAL_CDT>                 CGAL_Criteria;
-
-typedef CGAL_CDT::Vertex_handle CGAL_Vertex_handle;
-typedef CGAL_CDT::Point CGAL_Point;
 
 struct OpenMesh::VertexHandle const OpenMesh::PolyConnectivity::InvalidVertexHandle;
 
@@ -92,10 +69,10 @@ void MyMesh::Initialization()
 	std::cout << "Vert : " << n_vertices() << std::endl;
 	std::cout << "Face : " << n_faces() << std::endl;
 
-	deformed_vertices.clear();
+	this->deformed_vertices.clear();
 	for (MyMesh::VertexIter v_it = vertices_begin(); v_it != vertices_end(); ++v_it)
 	{
-		deformed_vertices.push_back(point(v_it));
+		this->deformed_vertices.push_back(point(v_it));
 	}
 
 	Registration();
@@ -284,7 +261,7 @@ void MyMesh::preComputeL2()
 	LL2 = L2.transpose() * L2;
 }
 
-void MyMesh::select(unsigned int face_ID, MyMesh::Point p)
+void MyMesh::createControlPoint(unsigned int face_ID, MyMesh::Point p)
 {
 	FaceHandle fh = this->face_handle(face_ID);
 
@@ -612,11 +589,30 @@ void MyMesh::Step2()
 GLMesh::GLMesh()
 {
 	current_key = MyMesh::Point(0, 0, 0);
-	/*
-	sc = new serverController();
-	sc->Stop();
-	std::function<void(char*, int)> callback = [this](char* buffer, int length) { this->socketCallback(buffer, length); };
-	sc->Run(callback);*/
+
+	//intitialize VAO
+	glGenVertexArrays(1, &this->vao.vao);
+	glBindVertexArray(this->vao.vao);
+
+	glGenBuffers(3, this->vao.vbo);
+
+	glBindBuffer(GL_ARRAY_BUFFER, this->vao.vbo[0]);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, this->vao.vbo[1]);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(1);
+
+	glBindBuffer(GL_ARRAY_BUFFER, this->vao.vbo[2]);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(2);
+
+	glGenBuffers(1, &this->vao.ebo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vao.ebo);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
 }
 
 GLMesh::~GLMesh()
@@ -629,44 +625,29 @@ bool GLMesh::Init(std::string fileName)
 	std::string filetype = fileName.substr(fileName.find_last_of(".") + 1);
 	bool success = false;
 
-	mesh.clear();
-	keyPoints.clear();
-	keyData.clear();
-	constrainedTriIDs.clear();
+	this->mesh.clear();
+	this->keyPoints.clear();
+	this->keyData.clear();
+	this->constrainedTriIDs.clear();
 
-	texture = nullptr;
+	//texture = nullptr;
+	texture = new Texture2D();
 
-	if (filetype == "bmp" || filetype == "jpg" || filetype == "png") {
-		success = Load2DImage(fileName);
-	}
-	else if (filetype == "obj") {
-		success = LoadMesh(fileName);
-	}
-	else if (filetype == "txt") {
-		success = Load2DModel(fileName);
+	/* the ampersand is actually optional */
+	bool (GLMesh:: * load)(std::string);
+	if (filetype == "bmp" || filetype == "jpg" || filetype == "png")
+		load = &GLMesh::Load2DImage;
+	else if (filetype == "obj")
+		load = &GLMesh::LoadMesh;
+	else if (filetype == "txt")
+		load = &GLMesh::Load2DModel;
+	else{
+		puts("ERROR::UNDEFINE FILE FORMAT");
+		return false;
 	}
 
-	if (success)
+	if ((this->*load)(fileName))
 	{
-		glGenVertexArrays(1, &this->vao.vao);
-		glBindVertexArray(this->vao.vao);
-
-		glGenBuffers(3, this->vao.vbo);
-
-		glBindBuffer(GL_ARRAY_BUFFER, this->vao.vbo[0]);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(0);
-
-		glBindBuffer(GL_ARRAY_BUFFER, this->vao.vbo[1]);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(1);
-
-		glGenBuffers(1, &this->vao.ebo);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vao.ebo);
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-
 		LoadToShader();
 		LoadTexCoordToShader();
 
@@ -684,15 +665,13 @@ void GLMesh::renderMesh()
 	{
 		glEnable(GL_TEXTURE_2D);
 
-		if (texture != nullptr)
-			texture->bind(0);
+		texture->bind(0);
 
 		glBindVertexArray(this->vao.vao);
 		glDrawElements(GL_TRIANGLES, this->vao.element_amount, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 
-		if (texture != nullptr)
-			texture->unbind(0);
+		texture->unbind(0);
 
 		glDisable(GL_TEXTURE_2D);
 	}
@@ -708,9 +687,14 @@ void GLMesh::renderSelectedMesh()
 			offsets.push_back((GLuint*)(tri_id * 3 * sizeof(GLuint)));
 		}
 		std::vector<int> count(constrainedTriIDs.size(), 3);
+
+		texture->bind(0);
+
 		glBindVertexArray(this->vao.vao);
 		glMultiDrawElements(GL_TRIANGLES, &count[0], GL_UNSIGNED_INT, (const GLvoid**)&offsets[0], constrainedTriIDs.size());
 		glBindVertexArray(0);
+
+		texture->unbind(0);
 	}
 }
 void GLMesh::renderControlPoints()
@@ -766,29 +750,39 @@ void GLMesh::renderKeyPoints()
 	glDisable(GL_POINT_SMOOTH);
 }
 
-void GLMesh::select(unsigned int tri_ID, MyMesh::Point p)
+void GLMesh::createControlPoint(unsigned int tri_ID, MyMesh::Point p)
 {
-	this->mesh.select(tri_ID, p);
+	this->mesh.createControlPoint(tri_ID, p);
 }
 
-void GLMesh::selectTri(unsigned int tri_ID, bool state)
+//void GLMesh::selectTri(unsigned int tri_ID, bool state)
+//{
+//	if (state) {
+//		constrainedTriIDs.insert(tri_ID);
+//	}
+//	else {
+//		constrainedTriIDs.erase(tri_ID);
+//	}
+//
+//	edge_weight_modified = true;
+//}
+void 
+GLMesh::addConstrainedTriangle(unsigned int tri_ID)
 {
-	if (state) {
-		constrainedTriIDs.insert(tri_ID);
-	}
-	else {
-		constrainedTriIDs.erase(tri_ID);
-	}
-
-	edge_weight_modified = true;
+	constrainedTriIDs.insert(tri_ID);
+}
+void 
+GLMesh::removeConstrainedTriangle(unsigned int tri_ID)
+{
+	constrainedTriIDs.erase(tri_ID);
 }
 
 void GLMesh::applyTriangleWeights()
 {
-	if(edge_weight_modified)
+	//if(edge_weight_modified)
 		mesh.SetEdgeWeights(constrainedTriIDs);
 
-	edge_weight_modified = false;
+	//edge_weight_modified = false;
 }
 
 // control points
@@ -831,7 +825,7 @@ void GLMesh::remove_selected()
 
 
 // keypoints
-void GLMesh::addKeyPoint(MyMesh::Point p)
+void GLMesh::addKeyPoint(MyMesh::Point p)	
 {
 	std::vector<MyMesh::Point> cps;
 	
@@ -854,6 +848,7 @@ void GLMesh::selectKeyPoint(MyMesh::Point p)
 	select_k_id = -1;
 	float min_d = 0.4;
 
+	//select current control key point if too close
 	float d = (current_key - p).length();
 	if (d < min_d) {
 		min_d = d;
@@ -866,7 +861,7 @@ void GLMesh::selectKeyPoint(MyMesh::Point p)
 		d = (kp - p).length();
 		if (d < min_d) {
 			min_d = d;
-			select_k_id = i;
+			select_k_id = i;	
 		}
 	}
 
@@ -938,48 +933,48 @@ void GLMesh::Interpolate()
 	UpdateShader();
 }
 
-#pragma region Connection
-void GLMesh::socketCallback(char* buffer, int length)
-{
-	if (is_decoding)
-		return;
-
-	is_decoding = true;
-
-	float scale_up = 1.4f;
-
-	float x, y;
-	int idx = 0;
-	int N_C = mesh.controlPoints.size();
-	std::reverse(buffer, buffer + length);
-	for (int i = 0; i < length && idx < N_C; i += 8, idx += 1) {
-		char* y_pos = buffer + i;
-		char* x_pos = buffer + i + 4;
-
-		memcpy(&x, x_pos, sizeof(float));
-		memcpy(&y, y_pos, sizeof(float));
-
-		// x,y is [0 , 1]
-		mesh.controlPoints[N_C-1-idx].c[0] = (x * 2 - 1) * SIZE * scale_up;
-		mesh.controlPoints[N_C-1-idx].c[2] = -(y * 2 - 1) * SIZE * scale_up;
-
-		//std::cout << x << ", " << y << ", "<< mesh.controlPoints[N_C - 1 - idx].c[0] << ", " << mesh.controlPoints[N_C - 1 - idx].c[2] << std::endl;
-	}
-
-	is_changed[0] = true;
-	//std::cout << "end" << std::endl;
-	is_decoding = false;
-}
-
-void GLMesh::checkUpdate()
-{
-	if (is_changed[0]) {
-		is_changed[0] = false;
-		mesh.Compute(0);
-		UpdateShader();
-	}
-}
-#pragma endregion
+//#pragma region Connection
+//void GLMesh::socketCallback(char* buffer, int length)
+//{
+//	if (is_decoding)
+//		return;
+//
+//	is_decoding = true;
+//
+//	float scale_up = 1.4f;
+//
+//	float x, y;
+//	int idx = 0;
+//	int N_C = mesh.controlPoints.size();
+//	std::reverse(buffer, buffer + length);
+//	for (int i = 0; i < length && idx < N_C; i += 8, idx += 1) {
+//		char* y_pos = buffer + i;
+//		char* x_pos = buffer + i + 4;
+//
+//		memcpy(&x, x_pos, sizeof(float));
+//		memcpy(&y, y_pos, sizeof(float));
+//
+//		// x,y is [0 , 1]
+//		mesh.controlPoints[N_C-1-idx].c[0] = (x * 2 - 1) * SIZE * scale_up;
+//		mesh.controlPoints[N_C-1-idx].c[2] = -(y * 2 - 1) * SIZE * scale_up;
+//
+//		//std::cout << x << ", " << y << ", "<< mesh.controlPoints[N_C - 1 - idx].c[0] << ", " << mesh.controlPoints[N_C - 1 - idx].c[2] << std::endl;
+//	}
+//
+//	is_changed[0] = true;
+//	//std::cout << "end" << std::endl;
+//	is_decoding = false;
+//}
+//
+//void GLMesh::checkUpdate()
+//{
+//	if (is_changed[0]) {
+//		is_changed[0] = false;
+//		mesh.Compute(0);
+//		UpdateShader();
+//	}
+//}
+//#pragma endregion
 
 
 #pragma region Utilities
@@ -1010,19 +1005,18 @@ void GLMesh::LoadToShader(
 	std::vector<unsigned int>& indices)
 {
 	if (!vertices.empty()) {
+		glBindVertexArray(this->vao.vao);
 		glBindBuffer(GL_ARRAY_BUFFER, this->vao.vbo[0]);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(MyMesh::Point) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(0);
 	}
 	if (!normals.empty()) {
+		glBindVertexArray(this->vao.vao);
 		glBindBuffer(GL_ARRAY_BUFFER, this->vao.vbo[1]);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(MyMesh::Normal) * normals.size(), &normals[0], GL_STATIC_DRAW);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(1);
 	}
 	if (!indices.empty()) {
 		this->vao.element_amount = indices.size();
+		glBindVertexArray(this->vao.vao);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vao.ebo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indices.size(), &indices[0], GL_STATIC_DRAW);
 	}
@@ -1059,25 +1053,26 @@ bool GLMesh::Load2DImage(std::string fileName)
 	//cv::Canny(img, edges, 100, 210);
 	//floodFill(edges, cv::Point2i(edges.cols / 2, edges.rows / 2), cv::Scalar(255, 255, 255));
 
-	std::vector<std::vector<cv::Point>> contour;
-	cv::findContours(img, contour, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+	std::vector<std::vector<cv::Point>> contours;
+	cv::findContours(img, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
 
-	if (contour.size() == 0)
+	if (contours.size() == 0)
 		return false;
 
+	//find maximum contour to do
 	int contour_id = 0;
 	int max = 0;
-	for (int i = 0; i < contour.size(); i++) {
-		if (contour[i].size() > max) {
-			max = contour[i].size();
+	for (int i = 0; i < contours.size(); i++) {
+		if (contours[i].size() > max) {
+			max = contours[i].size();
 			contour_id = i;
 		}
 	}
 
-	float epsilon = 0.005 * cv::arcLength(contour[contour_id], true);
+	float epsilon = 0.005 * cv::arcLength(contours[contour_id], true);
 
 	std::vector<cv::Point> approx;
-	cv::approxPolyDP(contour[contour_id], approx, epsilon, true);
+	cv::approxPolyDP(contours[contour_id], approx, epsilon, true);
 
 	// find bounding box
 	int max_x = approx[0].x;
@@ -1103,16 +1098,11 @@ bool GLMesh::Load2DImage(std::string fileName)
 	// insertion
 	std::vector<CGAL_Vertex_handle> vertices;
 	for (int i = 0; i < approx.size(); i++)
-	{
 		vertices.push_back(
-			cdt.insert(CGAL_Point(approx[i].x * norm_scale - x_offset, (1 - approx[i].y * norm_scale) - y_offset))
-		);
-	}
+			cdt.insert(CGAL_Point(approx[i].x * norm_scale - x_offset, (1 - approx[i].y * norm_scale) - y_offset)));
 
 	for (std::size_t i = 1; i < approx.size(); ++i)
-	{
 		cdt.insert_constraint(vertices[i-1], vertices[i]);
-	}
 	cdt.insert_constraint(vertices[0], vertices[approx.size() -1]);
 
 	std::cout << "Number of vertices: " << cdt.number_of_vertices() << std::endl;
@@ -1125,36 +1115,15 @@ bool GLMesh::Load2DImage(std::string fileName)
 	if (cdt.number_of_vertices() == 0)
 		return false;
 
-	float scale = SIZE;
-	std::map<CGAL_Vertex_handle, MyMesh::VertexHandle> v_handles;
-	for (auto v_it = cdt.finite_vertices_begin(); v_it != cdt.finite_vertices_end(); ++v_it)
+	const float SCALE = GLMesh::SIZE;
+	GLMesh::CgalCdtToOpenMesh(this->mesh, cdt, SCALE);
+	//create texture coordinate
+	for (MyMesh::VertexIter v_it = mesh.vertices_begin(); v_it != mesh.vertices_end(); ++v_it)
 	{
-		CGAL_Vertex_handle h = v_it->handle();
-		auto& p = v_it->point();
-
-		OpenMesh::Vec3f v(p.x() * scale, 0, p.y() * scale);
-		MyMesh::VertexHandle v_h = mesh.add_vertex(v);
-		mesh.set_texcoord2D(v_h, MyMesh::TexCoord2D(((p.x() + x_offset) / norm_scale) / img.cols, ((1 - p.y() - y_offset) / norm_scale) / img.rows));
-
-		v_handles[h] = v_h;
-	}
-
-	std::vector<MyMesh::VertexHandle> face_vhandles;
-	for (auto f_it = cdt.finite_faces_begin(); f_it != cdt.finite_faces_end(); ++f_it)
-	{
-		if (f_it->is_in_domain()) {
-
-			CGAL_Vertex_handle h0 = f_it->vertex(0)->handle();
-			CGAL_Vertex_handle h1 = f_it->vertex(1)->handle();
-			CGAL_Vertex_handle h2 = f_it->vertex(2)->handle();
-
-			face_vhandles.clear();
-			face_vhandles.push_back(v_handles[h0]);
-			face_vhandles.push_back(v_handles[h1]);
-			face_vhandles.push_back(v_handles[h2]);
-
-			mesh.add_face(face_vhandles);
-		}
+		OpenMesh::Vec3f& p = mesh.point(*v_it) / SCALE;
+		this->mesh.set_texcoord2D(
+			v_it.handle(), 
+			MyMesh::TexCoord2D(((p[0] + x_offset) / norm_scale) / img.cols, ((1 - p[2] - y_offset) / norm_scale) / img.rows));
 	}
 
 	mesh.Initialization();
@@ -1206,11 +1175,8 @@ bool GLMesh::Load2DModel(std::string fileName)
 	// insertion
 	std::vector<CGAL_Vertex_handle> vertices;
 	for (int i = 0; i < m_points.size(); i++)
-	{
 		vertices.push_back(
-			cdt.insert(CGAL_Point(m_points[i][0] * norm_scale - x_offset, m_points[i][1] * norm_scale - y_offset))
-		);
-	}
+			cdt.insert(CGAL_Point(m_points[i][0] * norm_scale - x_offset, m_points[i][1] * norm_scale - y_offset)));
 
 	for (std::size_t i = 0; i < nEdges; ++i)
 	{
@@ -1234,17 +1200,26 @@ bool GLMesh::Load2DModel(std::string fileName)
 	ifs.close();
 
 	std::cout << "Number of vertices: " << cdt.number_of_vertices() << std::endl;
-
 	std::cout << "Meshing..." << std::endl;
 	CGAL::refine_Delaunay_mesh_2(cdt, list_of_seeds.begin(), list_of_seeds.end(),
 		CGAL_Criteria(0.125, 0.12));
-
 	std::cout << " done." << std::endl;
 
 	if (cdt.number_of_vertices() == 0)
 		return false;
 
-	float scale = SIZE;
+	const float SCALE = this->SIZE;
+	GLMesh::CgalCdtToOpenMesh(this->mesh, cdt, SCALE);
+
+	mesh.Initialization();
+
+	return true;
+}
+
+void 
+GLMesh::CgalCdtToOpenMesh(MyMesh& mesh, const CGAL_CDT& cdt, float scale)
+{
+	//float scale = SIZE;
 	std::map<CGAL_Vertex_handle, MyMesh::VertexHandle> v_handles;
 	for (auto v_it = cdt.finite_vertices_begin(); v_it != cdt.finite_vertices_end(); ++v_it)
 	{
@@ -1271,15 +1246,10 @@ bool GLMesh::Load2DModel(std::string fileName)
 			mesh.add_face(face_vhandles);
 		}
 	}
-
-	mesh.Initialization();
-
-	return true;
 }
 
 bool GLMesh::LoadMesh(std::string fileName)
 {
-
 	OpenMesh::IO::Options ropt;
 	if (OpenMesh::IO::read_mesh(mesh, fileName, ropt))
 	{
@@ -1315,12 +1285,8 @@ void GLMesh::LoadTexCoordToShader()
 		}
 
 		glBindVertexArray(this->vao.vao);
-
 		glBindBuffer(GL_ARRAY_BUFFER, this->vao.vbo[2]);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(MyMesh::TexCoord2D) * texCoords.size(), &texCoords[0], GL_STATIC_DRAW);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(2);
-
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 	}

@@ -20,7 +20,21 @@ public:
 		glDeleteTextures(1, &this->id);
 		img.release();
 	}
+	Texture2D(Type texture_type = Texture2D::TEXTURE_DEFAULT):
+		type(texture_type)
+	{
+		glGenTextures(1, &this->id);
+		glBindTexture(GL_TEXTURE_2D, this->id);
 
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, new glm::u8vec4(255));
+		//glClearTexImage(this->id, 0, GL_RGBA, GL_UNSIGNED_BYTE, &glm::u8vec4(255)[0]);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
 	Texture2D(const char* path, Type texture_type = Texture2D::TEXTURE_DEFAULT):
 		type(texture_type)
 	{

@@ -114,7 +114,11 @@ void exportCB(Fl_Widget*, MyWindow* mw)
 
 void toggleWeightCB(Fl_Widget*, MyWindow* mw)
 {
-	mw->myView->setWeightMode(mw->renderWeightButton->value());
+	//mw->myView->setWeightMode(mw->renderWeightButton->value());
+
+	if (!mw->renderWeightButton->value()) 
+		mw->myView->gl_mesh->applyTriangleWeights();
+
 	mw->damageMe();
 }
 
@@ -124,4 +128,27 @@ void resetCB(Fl_Widget*, MyWindow* mw)
 	mw->myView->gl_mesh->resetMesh();
 	mw->damageMe();
 }
+
+// Scrollbar changed: show scrollbar's value when changed
+void scrollbarCB(Fl_Widget*, MyWindow* mw) {
+	char s[20];
+	sprintf(s, "%d", mw->frame_scrollbar->value());
+	mw->frame->value(s);
+}
+
+void framePlayCB(Fl_Widget*, MyWindow* mw)
+{
+
+}
+
+void frameSetCB(Fl_Widget*, MyWindow* mw)
+{
+
+}
+
+void framesRecordCB(Fl_Widget*, MyWindow* mw)
+{
+
+}
+
 

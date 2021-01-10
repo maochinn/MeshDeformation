@@ -42,8 +42,8 @@
 #include "MyWindow.h"
 #include "Utilities/3DUtils.h"
 
-#include <OpenMesh/Core/Mesh/PolyMesh_ArrayKernelT.hh>
-typedef OpenMesh::PolyMesh_ArrayKernelT<>  PolyMesh;
+//#include <OpenMesh/Core/Mesh/PolyMesh_ArrayKernelT.hh>
+//typedef OpenMesh::PolyMesh_ArrayKernelT<>  PolyMesh;
 
 
 //************************************************************************
@@ -96,10 +96,17 @@ int MyView::handle(int event)
 			return 1;
 		}
 
-	if (weight_mode) {
-		if (handleWeightMode(event)) {
-			return 1;
+	if (mw->renderWeightButton->value()) {
+		switch (event) {
+		case FL_DRAG:
+			if (Fl::event_button() == FL_LEFT_MOUSE)
+				this->selectConstraint(Fl::event_x(), Fl::event_y());
+			else if (Fl::event_button() == FL_RIGHT_MOUSE)
+				this->deselectConstraint(Fl::event_x(), Fl::event_y());
+			break;
 		}
+		damage(1);
+		return 1;
 	}
 	// remember what button was used
 	static int last_push;
@@ -108,41 +115,25 @@ int MyView::handle(int event)
 		// Mouse button being pushed event
 	case FL_PUSH:
 		last_push = Fl::event_button();
-		//// if the left button be pushed is left mouse button
-		//if (last_push == FL_LEFT_MOUSE)
-		//	if (!is_picking) {
-		//		do_pick = true;
-		//		pick_x = Fl::event_x();
-		//		pick_y = Fl::event_y();
-		//	}
-		/*else */
 		if (last_push == FL_RIGHT_MOUSE)
-			doSelect(Fl::event_x(), Fl::event_y());
-
-		damage(1);
+			this->gl_mesh->selectControlPoint(getWorldPos(Fl::event_x(), Fl::event_y()));
 		return 1;
 
 		// Mouse button release event
 	case FL_RELEASE: // button release
 		if (last_push == FL_LEFT_MOUSE)
-			doPick(Fl::event_x(), Fl::event_y());
+			this->createControlPoint(Fl::event_x(), Fl::event_y());
 		else if (last_push == FL_MIDDLE_MOUSE)
 		{
-			doSelect(Fl::event_x(), Fl::event_y());
+			this->gl_mesh->selectControlPoint(getWorldPos(Fl::event_x(), Fl::event_y()));
 			this->gl_mesh->remove_selected();
 		}
-
-		damage(1);
 		last_push = 0;
-		return 1;
-
-		// Mouse button drag event
+		break;
+	// Mouse button drag event
 	case FL_DRAG:
-		if (Fl::event_button() == FL_RIGHT_MOUSE) {
+		if (Fl::event_button() == FL_RIGHT_MOUSE)
 			doDrag(Fl::event_x(), Fl::event_y());
-			damage(1);
-			return 1;
-		}
 		break;
 
 		// in order to get keyboard events, we need to accept focus
@@ -153,7 +144,7 @@ int MyView::handle(int event)
 		// every time the mouse enters this window, aggressively take focus
 	case FL_ENTER:
 		focus(this);
-		break;
+		return 1;
 
 	case FL_MOUSEWHEEL:
 		top_cam_range += (Fl::event_dy() < 0) ? -0.01f : 0.01f;
@@ -161,9 +152,7 @@ int MyView::handle(int event)
 			top_cam_range = 0.001f;
 
 		view_changed();
-
 		return 1;
-		break;
 
 	case FL_KEYBOARD:
 		float speed = 5.0f;
@@ -185,9 +174,10 @@ int MyView::handle(int event)
 			view_changed();
 			return 1;
 		}
+
 	}
 
-
+	damage(1);
 	return Fl_Gl_Window::handle(event);
 }
 
@@ -265,7 +255,6 @@ void MyView::draw()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	setProjection();		// put the code to set up matrices here
-	//
 
 	setUBO();
 	glBindBufferRange(GL_UNIFORM_BUFFER, /*binding point*/0, this->commom_matrices->ubo, 0, this->commom_matrices->size);
@@ -276,25 +265,20 @@ void MyView::draw()
 	//bind shader
 	this->commom_shader->Use();
 
-	this->gl_mesh->checkUpdate();
+	//this->gl_mesh->checkUpdate();
 	
 	glUniformMatrix4fv(glGetUniformLocation(this->commom_shader->Program, "u_model"), 1, GL_FALSE, &model_matrix[0][0]);
-	//glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.941f, .25f, .25f)[0]);
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(1, 1, 1)[0]);
-
+	glUniform1i(glGetUniformLocation(this->commom_shader->Program, "u_texture"), 0);
 	this->gl_mesh->renderMesh();
 	
-	glDisable(GL_DEPTH_TEST);
+	//unbind shader(switch to fixed pipeline)
 	glUseProgram(0);
+	glDisable(GL_DEPTH_TEST);
 
-	//if (weight_mode) {
-		//glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.25f, .941f, .25f)[0]);
-		glColor4f(1.0f, 0, 0, 0.4f);
-		this->gl_mesh->renderSelectedMesh();
-	//}
+	glColor4f(1.0f, 0, 0, 0.4f);
+	this->gl_mesh->renderSelectedMesh();
 
-
-	//glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(.26f, .181f, .172f)[0]);
 	glColor4f(.26f, .181f, .172f, 0.6f);
 	glLineWidth(1.38f);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -302,8 +286,6 @@ void MyView::draw()
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	glDisable(GL_BLEND);
-
-	//unbind shader(switch to fixed pipeline)
 
 	this->gl_mesh->renderControlPoints();
 	/*if(do_pick)
@@ -316,33 +298,58 @@ void MyView::resize(int x, int y, int w, int h)
 	this->picking_tex.Resize(w, h);
 }
 
-void MyView::doPick(int mx, int my)
+void 
+MyView::createControlPoint(int mx, int my)
+{
+	int PrimID = pick(mx, my);
+	if(PrimID > 0)
+		this->gl_mesh->createControlPoint(PrimID, getWorldPos(mx, my));
+}
+
+void 
+MyView::selectConstraint(int mx, int my)
+{
+	int PrimID = pick(mx, my);
+	if (PrimID > 0)
+		this->gl_mesh->addConstrainedTriangle(PrimID);
+}
+void 
+MyView::deselectConstraint(int mx, int my)
+{
+	int PrimID = pick(mx, my);
+	if (PrimID > 0)
+		this->gl_mesh->removeConstrainedTriangle(PrimID);
+}
+
+int 
+MyView::pick(int mx, int my)
 {
 	UpdatePickTextrue();
 	GLuint PrimID = this->picking_tex.ReadPixel(mx, h() - my - 1) - 1;
 	if (this->gl_mesh->validID(PrimID)) {
 		//std::cout << PrimID << std::endl;
-		this->gl_mesh->select(PrimID, getWorldPos(mx, my));
+		return PrimID;
 	}
 	else {
-		std::cout << "Nope" << std::endl;
+		//std::cout << "Nope" << std::endl;
+		return -1;
 	}
 }
 
-void MyView::doPickWeightTri(int mx, int my, bool state)
-{
-	UpdatePickTextrue();
-	GLuint PrimID = this->picking_tex.ReadPixel(mx, h() - my - 1) - 1;
-	if (this->gl_mesh->validID(PrimID)) {
-		//std::cout << PrimID << std::endl;
-		this->gl_mesh->selectTri(PrimID, state);
-	}
-}
+//void MyView::doPickWeightTri(int mx, int my, bool state)
+//{
+//	UpdatePickTextrue();
+//	GLuint PrimID = this->picking_tex.ReadPixel(mx, h() - my - 1) - 1;
+//	if (this->gl_mesh->validID(PrimID)) {
+//		//std::cout << PrimID << std::endl;
+//		this->gl_mesh->selectTri(PrimID, state);
+//	}
+//}
 
-void MyView::doSelect(int mx, int my)
-{
-	this->gl_mesh->selectControlPoint(getWorldPos(mx, my));
-}
+//void MyView::doSelect(int mx, int my)
+//{
+//	this->gl_mesh->selectControlPoint(getWorldPos(mx, my));
+//}
 
 void MyView::doDrag(int mx, int my)
 {
@@ -467,13 +474,13 @@ void MyView::UpdatePickTextrue()
 	tex_is_outdated = false;
 }
 
-void MyView::setWeightMode(bool mode)
-{
-	if (!mode) {
-		gl_mesh->applyTriangleWeights();
-	}
-	weight_mode = mode;
-}
+//void MyView::setWeightMode(bool mode)
+//{
+//	if (!mode) {
+//		gl_mesh->applyTriangleWeights();
+//	}
+//	weight_mode = mode;
+//}
 
 void MyView::view_changed()
 {
@@ -481,22 +488,22 @@ void MyView::view_changed()
 	tex_is_outdated = true;
 }
 
-bool MyView::handleWeightMode(int e)
-{
-	switch (e) {
-	case FL_DRAG:
-		if (Fl::event_button() == FL_LEFT_MOUSE) {
-			doPickWeightTri(Fl::event_x(), Fl::event_y(), true);
-			damage(1);
-			return true;
-		}
-		else if (Fl::event_button() == FL_RIGHT_MOUSE) {
-			doPickWeightTri(Fl::event_x(), Fl::event_y(), false);
-			damage(1);
-			return true;
-		}
-		break;
-	}
-
-	return true;
-}
+//bool MyView::handleWeightMode(int e)
+//{
+//	switch (e) {
+//	case FL_DRAG:
+//		if (Fl::event_button() == FL_LEFT_MOUSE) {
+//			doPickWeightTri(Fl::event_x(), Fl::event_y(), true);
+//			damage(1);
+//			return true;
+//		}
+//		else if (Fl::event_button() == FL_RIGHT_MOUSE) {
+//			doPickWeightTri(Fl::event_x(), Fl::event_y(), false);
+//			damage(1);
+//			return true;
+//		}
+//		break;
+//	}
+//
+//	return true;
+//}

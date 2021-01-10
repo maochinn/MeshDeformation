@@ -1,20 +1,42 @@
 #pragma once
-
 #include <string>
+#include <queue>
+
+#include <glad/glad.h>
+
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
-#include <glad/glad.h>
-#include <queue>
+
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Constrained_Delaunay_triangulation_2.h>
+#include <CGAL/Delaunay_mesher_2.h>
+#include <CGAL/Delaunay_mesh_face_base_2.h>
+#include <CGAL/Delaunay_mesh_vertex_base_2.h>
+#include <CGAL/Delaunay_mesh_size_criteria_2.h>
 
 #include "BufferObject.h"
 #include "Texture.h"
 
-class serverController;
+//class serverController;
 
 typedef OpenMesh::TriMesh_ArrayKernelT<>  TriMesh;
 
+typedef CGAL::Exact_predicates_inexact_constructions_kernel           CGAL_K;
+typedef CGAL::Delaunay_mesh_vertex_base_2<CGAL_K>                     CGAL_Vb;
+typedef CGAL::Delaunay_mesh_face_base_2<CGAL_K>                       CGAL_Fb;
+typedef CGAL::Triangulation_data_structure_2<CGAL_Vb, CGAL_Fb>        CGAL_Tds;
+typedef CGAL::Constrained_Delaunay_triangulation_2<CGAL_K, CGAL_Tds>  CGAL_CDT;
+typedef CGAL::Delaunay_mesh_size_criteria_2<CGAL_CDT>                 CGAL_Criteria;
+
+typedef CGAL_CDT::Vertex_handle CGAL_Vertex_handle;
+typedef CGAL_CDT::Point CGAL_Point;
+
+#define CGAL_MESH_2_OPTIMIZER_VERBOSE
+//#define CGAL_MESH_2_OPTIMIZERS_DEBUG
+//#define CGAL_MESH_2_SIZING_FIELD_USE_BARYCENTRIC_COORDINATES
 
 #define SELECT_TYPE_CONTROL_POINT 0
 #define SELECT_TYPE_WEIGHT 1
@@ -40,7 +62,7 @@ public:
 		MyMesh::Point c;
 	};
 
-	void select(unsigned int, MyMesh::Point);
+	void createControlPoint(unsigned int, MyMesh::Point);
 
 	void InitCompilation();
 	void AddControlPoint(ControlPoint);
@@ -87,7 +109,7 @@ public:
 	GLMesh();
 	~GLMesh();
 
-	float SIZE = 250;
+	const float SIZE = 250.0f;
 
 	bool Init(std::string fileName);
 	void resetMesh();
@@ -105,13 +127,15 @@ public:
 	void renderKeyPoints();
 
 	// select triangle and add constraint
-	void select(unsigned int, MyMesh::Point);
-	void selectTri(unsigned int, bool);
-
+	
+	//void selectTri(unsigned int, bool);
+	void addConstrainedTriangle(unsigned int);
+	void removeConstrainedTriangle(unsigned int);
 	void applyTriangleWeights();
-
+	
 	// control points control
 	unsigned int select_id = -1;
+	void createControlPoint(unsigned int, MyMesh::Point);
 	void selectControlPoint(MyMesh::Point);
 	void dragControlPoint(MyMesh::Point);
 	void remove_selected();
@@ -126,10 +150,10 @@ public:
 	void Interpolate();
 
 	// connetion
-	bool is_changed[1] = { false };
-	bool is_decoding = false;
-	void socketCallback(char* buffer, int length);
-	void checkUpdate();
+	//bool is_changed[1] = { false };
+	//bool is_decoding = false;
+	//void socketCallback(char* buffer, int length);
+	//void checkUpdate();
 
 	// utilities
 	bool validID(unsigned int);
@@ -139,13 +163,13 @@ private:
 	VAO vao;
 	Texture2D* texture = nullptr;
 
-	serverController* sc;
-
 	std::vector<std::vector<MyMesh::Point>> keyData;
 	std::vector<MyMesh::Point> keyPoints;
 
 	std::set<unsigned int> constrainedTriIDs;
-	bool edge_weight_modified = false;
+	//bool edge_weight_modified = false;
+
+	static void CgalCdtToOpenMesh(MyMesh& mesh, const CGAL_CDT& cdt, float scale = 250);
 
 	bool Load2DImage(std::string fileName);
 	bool Load2DModel(std::string fileName);

@@ -30,7 +30,6 @@
 #include <FL/Fl_Box.h>
 
 
-
 // for using the real time clock
 #include <time.h>
 
@@ -63,8 +62,8 @@ MyWindow(const int x, const int y)
 		widgets = new Fl_Group(600, 5, 190, 590);
 		widgets->begin();
 
-		renderMeshButton = new Fl_Button(605, pty, 60, 20, "Mesh");
-		togglify(renderMeshButton, 1);
+		//renderMeshButton = new Fl_Button(605, pty, 60, 20, "Mesh");
+		//togglify(renderMeshButton, 1);
 
 		renderWeightButton = new Fl_Button(730, pty, 65, 20, "Weight");
 		togglify(renderWeightButton, 0);
@@ -77,7 +76,7 @@ MyWindow(const int x, const int y)
 		camGroup->begin();
 		world_cam = new Fl_Button(605, pty, 60, 20, "World");
 		world_cam->type(FL_RADIO_BUTTON);		// radio button
-		world_cam->value(0);			// turned off
+		world_cam->value(0);					// turned off
 		world_cam->selection_color((Fl_Color)3); // yellow when pressed
 		world_cam->callback((Fl_Callback*)damageCB, this);
 
@@ -89,24 +88,14 @@ MyWindow(const int x, const int y)
 		camGroup->end();
 		pty += 30;
 
-		// browser to select spline types
-		//simplification_browser = new Fl_Browser(605, pty, 120, 75, "Method");
-		//simplification_browser->type(2);		// select
-		//simplification_browser->callback((Fl_Callback*)damageCB, this);
-		//simplification_browser->add("Average");
-		//simplification_browser->add("Median");
-		//simplification_browser->add("Error quadrics");
-		//simplification_browser->select(1);
-
-		//pty += 110;
-
 		// reset the points
-		Fl_Button* importMesh = new Fl_Button(605, pty, 60, 20, "Import");
-		importMesh->callback((Fl_Callback*)importCB, this);
-		Fl_Button* exportMesh = new Fl_Button(675, pty, 60, 20, "Export");
-		exportMesh->callback((Fl_Callback*)exportCB, this);
-		Fl_Button* reset = new Fl_Button(735, pty, 60, 20, "Reset");
+		Fl_Button* reset = new Fl_Button(605, pty, 60, 20, "Reset");
 		reset->callback((Fl_Callback*)resetCB, this);
+		Fl_Button* importMesh = new Fl_Button(675, pty, 60, 20, "Import");
+		importMesh->callback((Fl_Callback*)importCB, this);
+		Fl_Button* exportMesh = new Fl_Button(735, pty, 60, 20, "Export");
+		exportMesh->callback((Fl_Callback*)exportCB, this);
+
 		pty += 65;
 
 		
@@ -140,6 +129,30 @@ MyWindow(const int x, const int y)
 		/*Fl_Button* Skeleton = new Fl_Button(605, pty, 60, 20, "Skeleton");
 		Skeleton->callback((Fl_Callback*)SkeletonCB, this);
 		pty += 25;*/
+
+		frame_scrollbar = new Fl_Scrollbar(605, pty, 195, 20, "Scrollbar");
+		frame_scrollbar->type(FL_HORIZONTAL);
+		frame_scrollbar->slider_size(.1);              // the fractional size of the scrollbar's tab, 1/2 scollbar's size
+		frame_scrollbar->bounds(0, 100);              // min/max value of the slider's positions
+		((Fl_Valuator*)frame_scrollbar)->value(0); // the initial value (in fltk1.3+ you can use scrollbar->value(150); 
+		frame_scrollbar->step(1);                     // force step rate to 1 (slider move changes value: 100, 110, 120..)
+		frame_scrollbar->callback((Fl_Callback*)scrollbarCB, this);
+
+		pty += 40;
+
+		// Create output to show scrollbar's value
+		frame = new Fl_Output(655, pty, 100, 40, "Frame:");
+		frame->textsize(24);
+
+		pty += 50;
+
+		frame_play = new Fl_Button(605, pty, 60, 20, "Play");
+		frame_play->callback((Fl_Callback*)framePlayCB, this);
+		frame_set = new Fl_Button(675, pty, 60, 20, "Set");
+		frame_set->callback((Fl_Callback*)frameSetCB, this);
+		frames_record = new Fl_Button(735, pty, 60, 20, "Record");
+		frames_record->callback((Fl_Callback*)framesRecordCB, this);
+
 
 #ifdef EXAMPLE_SOLUTION
 		makeExampleWidgets(this, pty);

@@ -79,12 +79,9 @@ int GuiView::handle(int event)
 	case FL_PUSH:
 		last_push = Fl::event_button();
 		//// if the left button be pushed is left mouse button
-		if (last_push == FL_LEFT_MOUSE)
-		{
-			doAdd(Fl::event_x(), Fl::event_y());
-		}
-		else if (last_push == FL_RIGHT_MOUSE) {
-			doSelect(Fl::event_x(), Fl::event_y());
+		if (last_push == FL_RIGHT_MOUSE) {
+			//doSelect(Fl::event_x(), Fl::event_y());
+			this->mw->myView->gl_mesh->selectKeyPoint(GetWorldPos(Fl::event_x(), Fl::event_y()));
 		}
 
 		damage(1);
@@ -93,11 +90,13 @@ int GuiView::handle(int event)
 		// Mouse button release event
 	case FL_RELEASE: // button release
 		if (last_push == FL_LEFT_MOUSE) {
-
+			//doAdd(Fl::event_x(), Fl::event_y());
+			this->mw->myView->gl_mesh->addKeyPoint(GetWorldPos(Fl::event_x(), Fl::event_y()));
 		}
 		else if (last_push == FL_MIDDLE_MOUSE)
 		{
-			doSelect(Fl::event_x(), Fl::event_y());
+			//doSelect(Fl::event_x(), Fl::event_y());
+			this->mw->myView->gl_mesh->selectKeyPoint(GetWorldPos(Fl::event_x(), Fl::event_y()));
 			this->mw->myView->gl_mesh->removeKeyPoint();
 		}
 		damage(1);
@@ -107,7 +106,8 @@ int GuiView::handle(int event)
 		// Mouse button drag event
 	case FL_DRAG:
 		if (Fl::event_button() == FL_RIGHT_MOUSE) {
-			doDrag(Fl::event_x(), Fl::event_y());
+			//doDrag(Fl::event_x(), Fl::event_y());
+			this->mw->myView->gl_mesh->dragKeyPoint(GetWorldPos(Fl::event_x(), Fl::event_y()));
 			damage(1);
 			return 1;
 		}
@@ -171,24 +171,10 @@ void GuiView::draw()
 	glLoadIdentity();
 
 	setProjection();		// put the code to set up matrices here
-	this->mw->myView->gl_mesh->renderKeyPoints();
+	if(this->mw->myView->gl_mesh)
+		this->mw->myView->gl_mesh->renderKeyPoints();
 
 
-}
-
-void GuiView::doAdd(int mx, int my)
-{
-	this->mw->myView->gl_mesh->addKeyPoint(GetWorldPos(mx, my));
-}
-
-void GuiView::doSelect(int mx, int my)
-{
-	this->mw->myView->gl_mesh->selectKeyPoint(GetWorldPos(mx, my));
-}
-
-void GuiView::doDrag(int mx, int my)
-{
-	this->mw->myView->gl_mesh->dragKeyPoint(GetWorldPos(mx, my));
 }
 
 MyMesh::Point GuiView::GetWorldPos(int mx, int my)

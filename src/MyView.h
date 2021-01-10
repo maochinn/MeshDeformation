@@ -46,7 +46,6 @@ class MyWindow;
 #include "RenderUtilities/BufferObject.h"
 #include "RenderUtilities/Shader.h"
 #include "RenderUtilities/Texture.h"
-#include "RenderUtilities/CubeMap.h"
 #include "RenderUtilities/MeshObject.h"
 #include "RenderUtilities/PickingTexture.h"
 
@@ -64,12 +63,16 @@ public:
 	virtual void resize(int, int, int, int);
 
 	void setWeightMode(bool);
-	bool handleWeightMode(int);
+	//bool handleWeightMode(int);
 
-	void doPick(int, int);
-	void doPickWeightTri(int, int, bool);
-	void doSelect(int, int);
+	void createControlPoint(int, int);
+	void selectConstraint(int, int);
+	void deselectConstraint(int, int);
+	//void doPickWeightTri(int, int, bool);
+	//void doSelect(int, int);
 	void doDrag(int, int);
+
+	int pick(int, int);
 
 	MyMesh::Point getWorldPos(int, int);
 
@@ -88,7 +91,7 @@ public:
 	void UpdatePickTextrue();
 
 public:
-	bool weight_mode = false;
+	//bool weight_mode = false;
 
 	ArcBallCam		arcball;			// keep an ArcBall for the UI
 

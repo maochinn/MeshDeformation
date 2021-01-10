@@ -36,6 +36,8 @@
 #include <Fl/Fl_Value_Slider.H>
 #include <Fl/Fl_Browser.H>
 #include <FL/Fl_Value_Input.H>
+#include <FL/Fl_Scrollbar.H>
+#include <FL/Fl_Output.H>
 #pragma warning(pop)
 
 // we need to know what is in the world to show
@@ -82,4 +84,10 @@ public:
 
 	//Fl_Value_Slider* simplification_slider;
 	//Fl_Value_Input* WL0;
+
+	Fl_Scrollbar* frame_scrollbar;
+	Fl_Output* frame;
+	Fl_Button* frame_play;
+	Fl_Button* frame_set;
+	Fl_Button* frames_record;
 };
