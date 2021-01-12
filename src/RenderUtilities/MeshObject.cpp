@@ -1013,12 +1013,29 @@ void GLMesh::resetMesh()
 typedef CGAL::Delaunay_mesher_2<CGAL_CDT, CGAL_Criteria> Mesher;
 bool GLMesh::Load2DImage(std::string fileName)
 {
-	cv::Mat rgb_img = cv::imread(fileName);
+	cv::Mat src_img = cv::imread(fileName, cv::IMREAD_UNCHANGED);
 
 	cv::Mat	img;
-	cv::cvtColor(rgb_img, img, CV_RGB2GRAY);
-	cv::threshold(img, img, 240, 255, cv::ThresholdTypes::THRESH_BINARY);
+	if (src_img.channels() == 4) //RGBA
+	{
+		// Split the image into different channels
+		std::vector<cv::Mat> channels;
+		cv::split(src_img, channels);
+		//cv::imshow("alpha", channels[3]);
+		cv::threshold(channels[3], img, 240, 255, cv::ThresholdTypes::THRESH_BINARY);
+		
+		cv::dilate(img, img, cv::Mat::ones(5, 5, CV_8UC1));
+	}
+	else
+	{
+		cv::cvtColor(src_img, img, CV_RGB2GRAY);
+		cv::threshold(img, img, 240, 255, cv::ThresholdTypes::THRESH_BINARY);
+
+		cv::erode(img, img, cv::Mat::ones(5, 5, CV_8UC1));
+	}
+
 	//cv::imshow("binary", img);
+	
 	//cv::Canny(img, edges, 100, 210);
 	//floodFill(edges, cv::Point2i(edges.cols / 2, edges.rows / 2), cv::Scalar(255, 255, 255));
 
@@ -1038,7 +1055,7 @@ bool GLMesh::Load2DImage(std::string fileName)
 		}
 	}
 
-	const float EPSILON = 0.005 * cv::arcLength(contours[contour_id], true);
+	const float EPSILON = 0.002 * cv::arcLength(contours[contour_id], true);
 
 	std::vector<cv::Point> approx;
 	cv::approxPolyDP(contours[contour_id], approx, EPSILON, true);

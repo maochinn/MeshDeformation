@@ -39,7 +39,7 @@ public:
 		type(texture_type)
 	{
 		//cv::imread(path, cv::IMREAD_COLOR).convertTo(img, CV_32FC3, 1 / 255.0f);	//unsigned char to float
-		img = cv::imread(path, cv::IMREAD_COLOR);
+		img = cv::imread(path, cv::IMREAD_UNCHANGED);
 
 		this->size.x = img.cols;
 		this->size.y = img.rows;

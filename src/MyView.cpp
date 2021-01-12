@@ -289,14 +289,14 @@ void MyView::draw()
 	if(this->mw->weightModeButton->value())
 		this->gl_mesh->renderSelectedMesh();
 
-	glColor4f(.26f, .181f, .172f, 0.6f);
+	glDisable(GL_BLEND);
+
+	glColor3f(.26f, .181f, .172f);
 	glLineWidth(1.38f);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	if(this->mw->renderWireframeButton->value())
+	if (this->mw->renderWireframeButton->value())
 		this->gl_mesh->renderMesh();
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-	glDisable(GL_BLEND);
 
 	if (this->mw->renderControlButton->value())
 		this->gl_mesh->renderControlPoints();
