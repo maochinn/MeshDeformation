@@ -62,14 +62,9 @@ public:
 	virtual void draw();
 	virtual void resize(int, int, int, int);
 
-	void setWeightMode(bool);
-	//bool handleWeightMode(int);
-
 	void createControlPoint(int, int);
 	void selectConstraint(int, int);
 	void deselectConstraint(int, int);
-	//void doPickWeightTri(int, int, bool);
-	//void doSelect(int, int);
 	void doDrag(int, int);
 
 	int pick(int, int);
@@ -86,13 +81,9 @@ public:
 	//set ubo
 	void setUBO();
 
-	bool tex_is_outdated = true;
-	void view_changed();
 	void UpdatePickTextrue();
 
 public:
-	//bool weight_mode = false;
-
 	ArcBallCam		arcball;			// keep an ArcBall for the UI
 
 	glm::vec3 translation;
@@ -108,5 +99,5 @@ public:
 	UBO* common_view = nullptr;
 
 	Shader* picking_shader = nullptr;
-	PickingTexture picking_tex;
+	PickingTexture* picking_tex = nullptr;
 };

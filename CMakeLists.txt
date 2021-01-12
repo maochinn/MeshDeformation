@@ -10,8 +10,6 @@ set(SRC_SHADER
     ${SRC_DIR}shaders/material_lib.glsl
     ${SRC_DIR}shaders/simple.vert
     ${SRC_DIR}shaders/simple.frag
-    ${SRC_DIR}shaders/cubeMap.vert
-    ${SRC_DIR}shaders/cubeMap.frag
     ${SRC_DIR}shaders/picking.vert
     ${SRC_DIR}shaders/picking.frag)
 

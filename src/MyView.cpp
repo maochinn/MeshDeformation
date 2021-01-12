@@ -30,7 +30,7 @@
 
 // we will need OpenGL, and OpenGL needs windows.h
 #include <windows.h>
-//#include "GL/gl.h"
+
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
@@ -40,10 +40,8 @@
 
 #include "MyView.h"
 #include "MyWindow.h"
-#include "Utilities/3DUtils.h"
 
-//#include <OpenMesh/Core/Mesh/PolyMesh_ArrayKernelT.hh>
-//typedef OpenMesh::PolyMesh_ArrayKernelT<>  PolyMesh;
+#include "Utilities/3DUtils.h"
 
 
 //************************************************************************
@@ -87,58 +85,62 @@ resetArcball()
 //========================================================================
 int MyView::handle(int event)
 {
+	// remember what button was used
+	static int last_push;
+	last_push = Fl::event_button();
+
 	// see if the ArcBall will handle the event - if it does, 
 	// then we're done
 	// note: the arcball only gets the event if we're in world view
 	if (mw->world_cam->value())
 		if (arcball.handle(event)) {
-			view_changed();
+			//view_changed();
 			return 1;
 		}
 
 	if (mw->renderWeightButton->value()) {
 		switch (event) {
+		case FL_PUSH:
+			return 1;
 		case FL_DRAG:
-			if (Fl::event_button() == FL_LEFT_MOUSE)
+			if (last_push == FL_LEFT_MOUSE)
 				this->selectConstraint(Fl::event_x(), Fl::event_y());
-			else if (Fl::event_button() == FL_RIGHT_MOUSE)
+			else if (last_push == FL_RIGHT_MOUSE)
 				this->deselectConstraint(Fl::event_x(), Fl::event_y());
 			break;
 		}
-		damage(1);
-		return 1;
 	}
-	// remember what button was used
-	static int last_push;
+	else
+	{
+		switch (event) {
+			// Mouse button being pushed event
+		case FL_PUSH:
+			if (last_push == FL_RIGHT_MOUSE)
+				this->gl_mesh->selectControlPoint(getWorldPos(Fl::event_x(), Fl::event_y()));
+			return 1;
 
-	switch (event) {
-		// Mouse button being pushed event
-	case FL_PUSH:
-		last_push = Fl::event_button();
-		if (last_push == FL_RIGHT_MOUSE)
-			this->gl_mesh->selectControlPoint(getWorldPos(Fl::event_x(), Fl::event_y()));
-		return 1;
-
-		// Mouse button release event
-	case FL_RELEASE: // button release
-		if (last_push == FL_LEFT_MOUSE)
-			this->createControlPoint(Fl::event_x(), Fl::event_y());
-		else if (last_push == FL_MIDDLE_MOUSE)
-		{
-			this->gl_mesh->selectControlPoint(getWorldPos(Fl::event_x(), Fl::event_y()));
-			this->gl_mesh->remove_selected();
+			// Mouse button release event
+		case FL_RELEASE: // button release
+			if (last_push == FL_LEFT_MOUSE)
+				this->createControlPoint(Fl::event_x(), Fl::event_y());
+			else if (last_push == FL_MIDDLE_MOUSE)
+			{
+				this->gl_mesh->selectControlPoint(getWorldPos(Fl::event_x(), Fl::event_y()));
+				this->gl_mesh->removeSelectedControlPoint();
+			}
+			last_push = 0;
+			break;
+			// Mouse button drag event
+		case FL_DRAG:
+			if (Fl::event_button() == FL_RIGHT_MOUSE)
+				doDrag(Fl::event_x(), Fl::event_y());
+			break;
 		}
-		last_push = 0;
-		break;
-	// Mouse button drag event
-	case FL_DRAG:
-		if (Fl::event_button() == FL_RIGHT_MOUSE)
-			doDrag(Fl::event_x(), Fl::event_y());
-		break;
-
+	}
+	switch (event) {
 		// in order to get keyboard events, we need to accept focus
 	case FL_FOCUS:
-		view_changed();
+		//view_changed();
 		return 1;
 
 		// every time the mouse enters this window, aggressively take focus
@@ -151,7 +153,7 @@ int MyView::handle(int event)
 		if (top_cam_range <= 0.0f)
 			top_cam_range = 0.001f;
 
-		view_changed();
+		//view_changed();
 		return 1;
 
 	case FL_KEYBOARD:
@@ -159,19 +161,19 @@ int MyView::handle(int event)
 		switch (Fl::event_key()) {
 		case FL_Down:
 			translation.z -= speed;
-			view_changed();
+			//view_changed();
 			return 1;
 		case FL_Up:
 			translation.z += speed;
-			view_changed();
+			//view_changed();
 			return 1;
 		case FL_Left:
 			translation.x -= speed;
-			view_changed();
+			//view_changed();
 			return 1;
 		case FL_Right:
 			translation.x += speed;
-			view_changed();
+			//view_changed();
 			return 1;
 		}
 
@@ -221,12 +223,14 @@ void MyView::draw()
 				common_lib + Shader::readCode("../MeshDeformation/src/shaders/picking.vert"),
 				std::string(), std::string(), std::string(),
 				Shader::readCode("../MeshDeformation/src/shaders/picking.frag"));
-			picking_tex.Init(w(), h());
+
+			this->picking_tex = new PickingTexture();
+			this->picking_tex->Init(w(), h());
 		}
 
 		if (!this->gl_mesh)
 		{
-			this->gl_mesh = new GLMesh();
+			this->gl_mesh = new GLMesh(this->mw->frame_scrollbar->maximum());
 			//this->gl_mesh->Init("D:/maochinn/NTUST/Course/DigitalMesh/project/build/output.obj");
 		}
 	}
@@ -288,14 +292,12 @@ void MyView::draw()
 	glDisable(GL_BLEND);
 
 	this->gl_mesh->renderControlPoints();
-	/*if(do_pick)
-		doPick(pick_x, pick_y);*/
 }
 
 void MyView::resize(int x, int y, int w, int h)
 {
 	Fl_Gl_Window::resize(x, y, w, h);
-	this->picking_tex.Resize(w, h);
+	this->picking_tex->createTexture(w, h);
 }
 
 void 
@@ -303,7 +305,7 @@ MyView::createControlPoint(int mx, int my)
 {
 	int PrimID = pick(mx, my);
 	if(PrimID > 0)
-		this->gl_mesh->createControlPoint(PrimID, getWorldPos(mx, my));
+		this->gl_mesh->addControlPoint(PrimID, getWorldPos(mx, my));
 }
 
 void 
@@ -325,7 +327,7 @@ int
 MyView::pick(int mx, int my)
 {
 	UpdatePickTextrue();
-	GLuint PrimID = this->picking_tex.ReadPixel(mx, h() - my - 1) - 1;
+	GLuint PrimID = this->picking_tex->ReadPixel(mx, h() - my - 1) - 1;
 	if (this->gl_mesh->validID(PrimID)) {
 		//std::cout << PrimID << std::endl;
 		return PrimID;
@@ -336,25 +338,19 @@ MyView::pick(int mx, int my)
 	}
 }
 
-//void MyView::doPickWeightTri(int mx, int my, bool state)
-//{
-//	UpdatePickTextrue();
-//	GLuint PrimID = this->picking_tex.ReadPixel(mx, h() - my - 1) - 1;
-//	if (this->gl_mesh->validID(PrimID)) {
-//		//std::cout << PrimID << std::endl;
-//		this->gl_mesh->selectTri(PrimID, state);
-//	}
-//}
-
-//void MyView::doSelect(int mx, int my)
-//{
-//	this->gl_mesh->selectControlPoint(getWorldPos(mx, my));
-//}
-
 void MyView::doDrag(int mx, int my)
 {
 	this->gl_mesh->dragControlPoint(getWorldPos(mx, my));
-	view_changed();
+
+	if (this->mw->frames_record->value())
+	{
+		int now = this->mw->frame_scrollbar->value();
+		int max = this->mw->frame_scrollbar->maximum();
+		int next = (now + 1) % (max + 1);
+		this->gl_mesh->setFrameControlPoint(next);
+		this->mw->frameIncrease();
+	}
+	//view_changed();
 }
 
 MyMesh::Point MyView::getWorldPos(int mx, int my)
@@ -444,66 +440,34 @@ void MyView::setUBO()
 
 void MyView::UpdatePickTextrue()
 {
-	if (tex_is_outdated)
-	{
-		// bind picking
-		this->picking_shader->Use();
-		this->picking_tex.EnableWriting();
-		glViewport(0, 0, w(), h());
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	// bind picking
+	this->picking_shader->Use();
+	this->picking_tex->EnableWriting();
+	glViewport(0, 0, w(), h());
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// prepare for projection
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		setProjection();		// put the code to set up matrices here
+	// prepare for projection
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	setProjection();		// put the code to set up matrices here
 
-		//
-		setUBO();
-		glBindBufferRange(GL_UNIFORM_BUFFER, /*binding point*/0, this->commom_matrices->ubo, 0, this->commom_matrices->size);
+	//
+	setUBO();
+	glBindBufferRange(GL_UNIFORM_BUFFER, /*binding point*/0, this->commom_matrices->ubo, 0, this->commom_matrices->size);
 
-		// model position (0,0,0)
-		glm::mat4 model_matrix = glm::mat4();
-		glUniformMatrix4fv(glGetUniformLocation(this->picking_shader->Program, "u_model"), 1, GL_FALSE, &model_matrix[0][0]);
+	// model position (0,0,0)
+	glm::mat4 model_matrix = glm::mat4();
+	glUniformMatrix4fv(glGetUniformLocation(this->picking_shader->Program, "u_model"), 1, GL_FALSE, &model_matrix[0][0]);
 
-		this->gl_mesh->renderMesh();
+	this->gl_mesh->renderMesh();
 
-		this->picking_tex.DisableWriting();
+	this->picking_tex->DisableWriting();
 
-		glUseProgram(0);
-	}
-	tex_is_outdated = false;
+	glUseProgram(0);
 }
 
-//void MyView::setWeightMode(bool mode)
+//void MyView::view_changed()
 //{
-//	if (!mode) {
-//		gl_mesh->applyTriangleWeights();
-//	}
-//	weight_mode = mode;
-//}
-
-void MyView::view_changed()
-{
-	//std::cout << "CHANGED\n";
-	tex_is_outdated = true;
-}
-
-//bool MyView::handleWeightMode(int e)
-//{
-//	switch (e) {
-//	case FL_DRAG:
-//		if (Fl::event_button() == FL_LEFT_MOUSE) {
-//			doPickWeightTri(Fl::event_x(), Fl::event_y(), true);
-//			damage(1);
-//			return true;
-//		}
-//		else if (Fl::event_button() == FL_RIGHT_MOUSE) {
-//			doPickWeightTri(Fl::event_x(), Fl::event_y(), false);
-//			damage(1);
-//			return true;
-//		}
-//		break;
-//	}
-//
-//	return true;
+//	//std::cout << "CHANGED\n";
+//	tex_is_outdated = true;
 //}

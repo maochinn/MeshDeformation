@@ -97,7 +97,7 @@ int GuiView::handle(int event)
 		{
 			//doSelect(Fl::event_x(), Fl::event_y());
 			this->mw->myView->gl_mesh->selectKeyPoint(GetWorldPos(Fl::event_x(), Fl::event_y()));
-			this->mw->myView->gl_mesh->removeKeyPoint();
+			this->mw->myView->gl_mesh->removeSelectedKeyPoint();
 		}
 		damage(1);
 		last_push = 0;
@@ -125,7 +125,7 @@ int GuiView::handle(int event)
 		int k = Fl::event_key();
 		int ks = Fl::event_state();
 		if (k == 'd') {
-			this->mw->myView->gl_mesh->removeKeyPoint();
+			this->mw->myView->gl_mesh->removeSelectedKeyPoint();
 			damage(1);
 			return 1;
 		}

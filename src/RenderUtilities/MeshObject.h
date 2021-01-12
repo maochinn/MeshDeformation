@@ -62,7 +62,7 @@ public:
 		MyMesh::Point c;
 	};
 
-	void createControlPoint(unsigned int, MyMesh::Point);
+	ControlPoint createControlPoint(unsigned int, MyMesh::Point);
 
 	void InitCompilation();
 	void AddControlPoint(ControlPoint);
@@ -76,7 +76,7 @@ public:
 	void Step1();
 	void Step2();
 
-	double W = 1000;
+	const double W = 1000;
 
 	std::vector<ControlPoint> controlPoints;
 	std::vector<MyMesh::Point> deformed_vertices;
@@ -106,7 +106,7 @@ private:
 class GLMesh
 {
 public:
-	GLMesh();
+	GLMesh(int frames);
 	~GLMesh();
 
 	const float SIZE = 250.0f;
@@ -134,40 +134,42 @@ public:
 	void applyTriangleWeights();
 	
 	// control points control
-	unsigned int select_id = -1;
-	void createControlPoint(unsigned int, MyMesh::Point);
+	int select_id = -1;
+	void addControlPoint(unsigned int, MyMesh::Point);
 	void selectControlPoint(MyMesh::Point);
 	void dragControlPoint(MyMesh::Point);
-	void remove_selected();
+	void removeSelectedControlPoint();
 
 	// keypoints control
-	unsigned int select_k_id = -1;
+	int select_k_id = -1;
 	MyMesh::Point current_key;
 	void addKeyPoint(MyMesh::Point);
 	void selectKeyPoint(MyMesh::Point);
 	void dragKeyPoint(MyMesh::Point);
-	void removeKeyPoint();
+	void removeSelectedKeyPoint();
 	void Interpolate();
-
-	// connetion
-	//bool is_changed[1] = { false };
-	//bool is_decoding = false;
-	//void socketCallback(char* buffer, int length);
-	//void checkUpdate();
+	  
+	// frame operator
+	void setFrameControlPoint(int);
+	void loadFrameControlPoint(int);
+	
 
 	// utilities
-	bool validID(unsigned int);
+	bool validID(int);
 
 private:
 	MyMesh mesh;
 	VAO vao;
 	Texture2D* texture = nullptr;
 
+	//keyData store control points per keypoint
 	std::vector<std::vector<MyMesh::Point>> keyData;
 	std::vector<MyMesh::Point> keyPoints;
 
+	//frameData store control points per frame
+	std::vector<std::vector<MyMesh::Point>> frameData;
+
 	std::set<unsigned int> constrainedTriIDs;
-	//bool edge_weight_modified = false;
 
 	static void CgalCdtToOpenMesh(MyMesh& mesh, const CGAL_CDT& cdt, float scale = 250);
 

@@ -40,6 +40,7 @@
 #include <FL/Fl_Output.H>
 #pragma warning(pop)
 
+
 // we need to know what is in the world to show
 //#include "Track.h"
 
@@ -62,6 +63,8 @@ public:
 
 	// simple helper function to set up a button
 	void togglify(Fl_Button*, int state = 0);
+
+	void frameIncrease();
 public:
 	// keep track of the stuff in the world
 	//CTrack				m_Track;
@@ -86,7 +89,7 @@ public:
 	//Fl_Value_Input* WL0;
 
 	Fl_Scrollbar* frame_scrollbar;
-	Fl_Output* frame;
+	Fl_Output* frame_number;
 	Fl_Button* frame_play;
 	Fl_Button* frame_set;
 	Fl_Button* frames_record;

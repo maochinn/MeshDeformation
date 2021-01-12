@@ -12,9 +12,9 @@ public:
 	virtual int handle(int);
 	virtual void draw();
 
-	void doAdd(int, int);
-	void doSelect(int, int);
-	void doDrag(int, int);
+	//void doAdd(int, int);
+	//void doSelect(int, int);
+	//void doDrag(int, int);
 	MyMesh::Point GetWorldPos(int, int);
 
 	// setup the projection - assuming that the projection stack has been

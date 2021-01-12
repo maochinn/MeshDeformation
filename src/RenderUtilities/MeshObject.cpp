@@ -7,8 +7,6 @@
 
 #include "MeshObject.h"
 
-//#include "..\server.h"
-
 #include <fstream>
 
 struct OpenMesh::VertexHandle const OpenMesh::PolyConnectivity::InvalidVertexHandle;
@@ -261,7 +259,7 @@ void MyMesh::preComputeL2()
 	LL2 = L2.transpose() * L2;
 }
 
-void MyMesh::createControlPoint(unsigned int face_ID, MyMesh::Point p)
+MyMesh::ControlPoint MyMesh::createControlPoint(unsigned int face_ID, MyMesh::Point p)
 {
 	FaceHandle fh = this->face_handle(face_ID);
 
@@ -297,6 +295,8 @@ void MyMesh::createControlPoint(unsigned int face_ID, MyMesh::Point p)
 	//cp.c = MyMesh::Point(0,0,0);
 
 	AddControlPoint(cp);
+
+	return cp;
 }
 
 void MyMesh::InitCompilation()
@@ -586,9 +586,12 @@ void MyMesh::Step2()
 
 #pragma region GLMesh
 
-GLMesh::GLMesh()
+GLMesh::GLMesh(int frames)
 {
 	current_key = MyMesh::Point(0, 0, 0);
+
+	for (int i(0); i <= frames; i++)
+		this->frameData.push_back(std::vector<MyMesh::Point>());
 
 	//intitialize VAO
 	glGenVertexArrays(1, &this->vao.vao);
@@ -750,22 +753,22 @@ void GLMesh::renderKeyPoints()
 	glDisable(GL_POINT_SMOOTH);
 }
 
-void GLMesh::createControlPoint(unsigned int tri_ID, MyMesh::Point p)
+void GLMesh::addControlPoint(unsigned int tri_ID, MyMesh::Point p)
 {
-	this->mesh.createControlPoint(tri_ID, p);
+	const MyMesh::ControlPoint& cp = this->mesh.createControlPoint(tri_ID, p);
+
+	//add new point in key data too
+	for (auto& data : this->keyData)
+	{
+		data.push_back(cp.c);
+	}
+
+	for (auto& data : this->frameData)
+	{
+		data.push_back(cp.c);
+	}
 }
 
-//void GLMesh::selectTri(unsigned int tri_ID, bool state)
-//{
-//	if (state) {
-//		constrainedTriIDs.insert(tri_ID);
-//	}
-//	else {
-//		constrainedTriIDs.erase(tri_ID);
-//	}
-//
-//	edge_weight_modified = true;
-//}
 void 
 GLMesh::addConstrainedTriangle(unsigned int tri_ID)
 {
@@ -779,10 +782,7 @@ GLMesh::removeConstrainedTriangle(unsigned int tri_ID)
 
 void GLMesh::applyTriangleWeights()
 {
-	//if(edge_weight_modified)
-		mesh.SetEdgeWeights(constrainedTriIDs);
-
-	//edge_weight_modified = false;
+	mesh.SetEdgeWeights(constrainedTriIDs);
 }
 
 // control points
@@ -815,11 +815,23 @@ void GLMesh::dragControlPoint(MyMesh::Point p)
 	UpdateShader();
 }
 
-void GLMesh::remove_selected()
+void GLMesh::removeSelectedControlPoint()
 {
-	if (validID(select_id)) {
-		mesh.RemoveControlPoint(select_id);
+	if (!validID(select_id))
+		return;
+
+	mesh.RemoveControlPoint(select_id);
+	//remove control point in key data too
+	for (auto& data : this->keyData)
+	{
+		data.erase(data.begin() + select_id);
 	}
+
+	for (auto& data : this->frameData)
+	{
+		data.erase(data.begin() + select_id);
+	}
+
 	select_id = -1;
 }
 
@@ -889,7 +901,7 @@ void GLMesh::dragKeyPoint(MyMesh::Point p)
 		keyPoints[select_k_id][2] = int(p[2]);
 	}
 }
-void GLMesh::removeKeyPoint()
+void GLMesh::removeSelectedKeyPoint()
 {
 	if (select_k_id != -1) {
 		keyPoints.erase(keyPoints.begin() + select_k_id);
@@ -908,15 +920,15 @@ void GLMesh::Interpolate()
 	}
 
 	float weight_sum = 0;
-	float epsilon = 0.0001f;
+	const float EPSILON = 0.0001f;
 	for (size_t j = 0; j < n_controlPoints; j++) {
 		MyMesh::ControlPoint& cp = this->mesh.controlPoints[j];
 		cp.c = MyMesh::Point(0, 0, 0);
 	}
 
 	for (size_t i = 0; i < n_keyPoints; i++) {
-		MyMesh::Point& kp = keyPoints[i];
-		float weight = 1.0 / ((kp - current_key).sqrnorm() + epsilon);
+		const MyMesh::Point& kp = keyPoints[i];
+		float weight = 1.0 / ((kp - current_key).sqrnorm() + EPSILON);
 		weight_sum += weight;
 		for (size_t j = 0; j < n_controlPoints; j++) {
 			MyMesh::ControlPoint& cp = this->mesh.controlPoints[j];
@@ -933,54 +945,10 @@ void GLMesh::Interpolate()
 	UpdateShader();
 }
 
-//#pragma region Connection
-//void GLMesh::socketCallback(char* buffer, int length)
-//{
-//	if (is_decoding)
-//		return;
-//
-//	is_decoding = true;
-//
-//	float scale_up = 1.4f;
-//
-//	float x, y;
-//	int idx = 0;
-//	int N_C = mesh.controlPoints.size();
-//	std::reverse(buffer, buffer + length);
-//	for (int i = 0; i < length && idx < N_C; i += 8, idx += 1) {
-//		char* y_pos = buffer + i;
-//		char* x_pos = buffer + i + 4;
-//
-//		memcpy(&x, x_pos, sizeof(float));
-//		memcpy(&y, y_pos, sizeof(float));
-//
-//		// x,y is [0 , 1]
-//		mesh.controlPoints[N_C-1-idx].c[0] = (x * 2 - 1) * SIZE * scale_up;
-//		mesh.controlPoints[N_C-1-idx].c[2] = -(y * 2 - 1) * SIZE * scale_up;
-//
-//		//std::cout << x << ", " << y << ", "<< mesh.controlPoints[N_C - 1 - idx].c[0] << ", " << mesh.controlPoints[N_C - 1 - idx].c[2] << std::endl;
-//	}
-//
-//	is_changed[0] = true;
-//	//std::cout << "end" << std::endl;
-//	is_decoding = false;
-//}
-//
-//void GLMesh::checkUpdate()
-//{
-//	if (is_changed[0]) {
-//		is_changed[0] = false;
-//		mesh.Compute(0);
-//		UpdateShader();
-//	}
-//}
-//#pragma endregion
-
-
 #pragma region Utilities
-bool GLMesh::validID(unsigned int faceID)
+bool GLMesh::validID(int faceID)
 {
-	return (faceID < mesh.n_faces());
+	return (faceID >= 0) && (faceID < mesh.n_faces());
 }
 
 void GLMesh::LoadToShader()
@@ -1050,6 +1018,7 @@ bool GLMesh::Load2DImage(std::string fileName)
 	cv::Mat	img;
 	cv::cvtColor(rgb_img, img, CV_RGB2GRAY);
 	cv::threshold(img, img, 254, 255, cv::ThresholdTypes::THRESH_BINARY);
+	//cv::imshow("binary", img);
 	//cv::Canny(img, edges, 100, 210);
 	//floodFill(edges, cv::Point2i(edges.cols / 2, edges.rows / 2), cv::Scalar(255, 255, 255));
 
@@ -1475,5 +1444,42 @@ bool GLMesh::exportPreset(std::string fname)
 }
 
 #pragma endregion
+
+void 
+GLMesh::setFrameControlPoint(int frame)
+{
+	if (frame < 0 || frame >= this->frameData.size())
+		return;
+
+	this->frameData[frame].clear();
+	for (const MyMesh::ControlPoint& cp : this->mesh.controlPoints)
+	{
+		this->frameData[frame].push_back(cp.c);
+	}
+}
+void 
+GLMesh::loadFrameControlPoint(int frame)
+{
+	if (frame < 0 || frame >= this->frameData.size())
+		return;
+
+	if (this->frameData[frame].empty()) {
+		puts("this frame have no points");
+		return;
+	}
+	if (this->frameData[frame].size() != this->mesh.controlPoints.size()) {
+		puts("frame points != now points");
+		return;
+	}
+
+	for (size_t j = 0; j < this->mesh.controlPoints.size(); j++) {
+		MyMesh::ControlPoint& cp = this->mesh.controlPoints[j];
+		cp.c = this->frameData[frame][j];
+	}
+	mesh.Compute(0);
+	UpdateShader();
+
+		
+}
 
 #pragma endregion

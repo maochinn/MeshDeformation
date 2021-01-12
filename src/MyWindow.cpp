@@ -45,7 +45,7 @@
 //========================================================================
 MyWindow::
 MyWindow(const int x, const int y)
-	: Fl_Double_Window(x, y, 800, 600, "Mesh Simplification")
+	: Fl_Double_Window(x, y, 800, 600, "Mesh Deformation")
 	//========================================================================
 {
 	// make all of the widgets
@@ -98,7 +98,7 @@ MyWindow(const int x, const int y)
 
 		pty += 65;
 
-		
+
 		guiView = new GuiView(600, pty, 196, 196);
 		guiView->mw = this;
 		pty += 201;
@@ -124,7 +124,7 @@ MyWindow(const int x, const int y)
 		/*WL0 = new Fl_Value_Input(675, pty, 60, 20, "WL0"); WL0->value(0.001); pty += 25;
 		WH0 = new Fl_Value_Input(675, pty, 60, 20, "WH0"); WH0->value(1.0); pty += 25;
 		SL = new Fl_Value_Input(675, pty, 60, 20, "SL"); SL->value(4.0); pty += 25;*/
-		
+
 
 		/*Fl_Button* Skeleton = new Fl_Button(605, pty, 60, 20, "Skeleton");
 		Skeleton->callback((Fl_Callback*)SkeletonCB, this);
@@ -136,22 +136,26 @@ MyWindow(const int x, const int y)
 		frame_scrollbar->bounds(0, 100);              // min/max value of the slider's positions
 		((Fl_Valuator*)frame_scrollbar)->value(0); // the initial value (in fltk1.3+ you can use scrollbar->value(150); 
 		frame_scrollbar->step(1);                     // force step rate to 1 (slider move changes value: 100, 110, 120..)
+		frame_scrollbar->linesize(1);
 		frame_scrollbar->callback((Fl_Callback*)scrollbarCB, this);
 
 		pty += 40;
 
 		// Create output to show scrollbar's value
-		frame = new Fl_Output(655, pty, 100, 40, "Frame:");
-		frame->textsize(24);
+		frame_number = new Fl_Output(655, pty, 100, 40, "Frame:");
+		frame_number->textsize(24);
+		frame_number->value("0");
 
 		pty += 50;
 
 		frame_play = new Fl_Button(605, pty, 60, 20, "Play");
+		togglify(frame_play, 0);
 		frame_play->callback((Fl_Callback*)framePlayCB, this);
 		frame_set = new Fl_Button(675, pty, 60, 20, "Set");
 		frame_set->callback((Fl_Callback*)frameSetCB, this);
 		frames_record = new Fl_Button(735, pty, 60, 20, "Record");
 		frames_record->callback((Fl_Callback*)framesRecordCB, this);
+		togglify(frames_record, 0);
 
 
 #ifdef EXAMPLE_SOLUTION
@@ -193,4 +197,16 @@ damageMe()
 //========================================================================
 {
 	myView->damage(1);
+}
+
+
+void 
+MyWindow::frameIncrease()
+{
+	int now = this->frame_scrollbar->value();
+	int max = this->frame_scrollbar->maximum();
+	int next = (now + 1) % (max + 1);
+	this->frame_scrollbar->value(next);
+
+	scrollbarCB(nullptr, this);
 }

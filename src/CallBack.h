@@ -25,7 +25,7 @@
 
 #include "MyWindow.h"
 #include "MyView.h"
-#include "CallBack.h"
+#include "GuiView.h"
 
 #pragma warning(push)
 #pragma warning(disable:4312)
@@ -42,34 +42,6 @@ void damageCB(Fl_Widget*, MyWindow* mw)
 	mw->damageMe();
 }
 
-static unsigned long lastRedraw = 0;
-//***************************************************************************
-//
-// * Callback for idling - if things are sitting, this gets called
-// if the run button is pushed, then we need to make the train go.
-// This is taken from the old "RunButton" demo.
-// another nice problem to have - most likely, we'll be too fast
-// don't draw more than 30 times per second
-//===========================================================================
-void idleCB(MyWindow* mw)
-//===========================================================================
-{
-	if (mw != NULL)
-	{
-		//float fps = CLOCKS_PER_SEC / (float)(clock() - lastRedraw);
-		//if (fps < 30.0)
-		if (clock() - lastRedraw > CLOCKS_PER_SEC / 30)
-		{
-			//system("cls");
-			//std::cout << "FPS:" << fps << std::endl;
-
-			lastRedraw = clock();
-			mw->damageMe();
-		}
-
-	}
-}
-
 void importPresetCB(Fl_Widget*, MyWindow* mw)
 {
 	const char* fname =
@@ -77,7 +49,7 @@ void importPresetCB(Fl_Widget*, MyWindow* mw)
 
 	if (fname) {
 		mw->myView->gl_mesh->importPreset(fname);
-		mw->guiView->damage(1);
+		//mw->guiView->damage(1);
 	}
 }
 void exportPresetCB(Fl_Widget*, MyWindow* mw)
@@ -97,7 +69,7 @@ void importCB(Fl_Widget*, MyWindow* mw)
 	if (fname) {
 		mw->myView->gl_mesh->Init(fname);
 		mw->damageMe();
-		mw->guiView->damage(1);
+		//mw->guiView->damage(1);
 	}
 }
 
@@ -133,17 +105,21 @@ void resetCB(Fl_Widget*, MyWindow* mw)
 void scrollbarCB(Fl_Widget*, MyWindow* mw) {
 	char s[20];
 	sprintf(s, "%d", mw->frame_scrollbar->value());
-	mw->frame->value(s);
+	mw->frame_number->value(s);
+
+	mw->myView->gl_mesh->loadFrameControlPoint(mw->frame_scrollbar->value());
+	mw->damageMe();
 }
 
-void framePlayCB(Fl_Widget*, MyWindow* mw)
+void framePlayCB(Fl_Widget* w, MyWindow* mw)
 {
-
+	
 }
 
 void frameSetCB(Fl_Widget*, MyWindow* mw)
 {
-
+	mw->myView->gl_mesh->setFrameControlPoint(mw->frame_scrollbar->value());
+	//mw->damageMe();
 }
 
 void framesRecordCB(Fl_Widget*, MyWindow* mw)
@@ -151,4 +127,35 @@ void framesRecordCB(Fl_Widget*, MyWindow* mw)
 
 }
 
+static unsigned long lastRedraw = 0;
+//***************************************************************************
+//
+// * Callback for idling - if things are sitting, this gets called
+// if the run button is pushed, then we need to make the train go.
+// This is taken from the old "RunButton" demo.
+// another nice problem to have - most likely, we'll be too fast
+// don't draw more than 30 times per second
+//===========================================================================
+void idleCB(MyWindow* mw)
+//===========================================================================
+{
+	if (mw != NULL)
+	{
+		//float fps = CLOCKS_PER_SEC / (float)(clock() - lastRedraw);
+		//if (fps < 30.0)
+		if (clock() - lastRedraw > CLOCKS_PER_SEC / 30)
+		{
+			//system("cls");
+			//std::cout << "FPS:" << fps << std::endl;
+
+			if (mw->frame_play->value()) {
+				mw->frameIncrease();
+			}
+
+			lastRedraw = clock();
+			mw->damageMe();
+		}
+
+	}
+}
 
