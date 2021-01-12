@@ -112,30 +112,34 @@ int MyView::handle(int event)
 	}
 	else
 	{
-		switch (event) {
-			// Mouse button being pushed event
-		case FL_PUSH:
-			if (last_push == FL_RIGHT_MOUSE)
-				this->gl_mesh->selectControlPoint(getWorldPos(Fl::event_x(), Fl::event_y()));
-			return 1;
+		if (this->mw->renderControlButton->value())
+		{
+			switch (event) {
+				// Mouse button being pushed event
+			case FL_PUSH:
+				if (last_push == FL_RIGHT_MOUSE)
+					this->gl_mesh->selectControlPoint(getWorldPos(Fl::event_x(), Fl::event_y()));
+				return 1;
 
-			// Mouse button release event
-		case FL_RELEASE: // button release
-			if (last_push == FL_LEFT_MOUSE)
-				this->createControlPoint(Fl::event_x(), Fl::event_y());
-			else if (last_push == FL_MIDDLE_MOUSE)
-			{
-				this->gl_mesh->selectControlPoint(getWorldPos(Fl::event_x(), Fl::event_y()));
-				this->gl_mesh->removeSelectedControlPoint();
+				// Mouse button release event
+			case FL_RELEASE: // button release
+				if (last_push == FL_LEFT_MOUSE)
+					this->createControlPoint(Fl::event_x(), Fl::event_y());
+				else if (last_push == FL_MIDDLE_MOUSE)
+				{
+					this->gl_mesh->selectControlPoint(getWorldPos(Fl::event_x(), Fl::event_y()));
+					this->gl_mesh->removeSelectedControlPoint();
+				}
+				last_push = 0;
+				break;
+				// Mouse button drag event
+			case FL_DRAG:
+				if (Fl::event_button() == FL_RIGHT_MOUSE)
+					doDrag(Fl::event_x(), Fl::event_y());
+				break;
 			}
-			last_push = 0;
-			break;
-			// Mouse button drag event
-		case FL_DRAG:
-			if (Fl::event_button() == FL_RIGHT_MOUSE)
-				doDrag(Fl::event_x(), Fl::event_y());
-			break;
 		}
+	
 	}
 	switch (event) {
 		// in order to get keyboard events, we need to accept focus

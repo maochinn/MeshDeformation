@@ -1038,7 +1038,7 @@ bool GLMesh::Load2DImage(std::string fileName)
 		}
 	}
 
-	const float EPSILON = 0.002 * cv::arcLength(contours[contour_id], true);
+	const float EPSILON = 0.005 * cv::arcLength(contours[contour_id], true);
 
 	std::vector<cv::Point> approx;
 	cv::approxPolyDP(contours[contour_id], approx, EPSILON, true);
