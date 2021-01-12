@@ -1017,7 +1017,7 @@ bool GLMesh::Load2DImage(std::string fileName)
 
 	cv::Mat	img;
 	cv::cvtColor(rgb_img, img, CV_RGB2GRAY);
-	cv::threshold(img, img, 254, 255, cv::ThresholdTypes::THRESH_BINARY);
+	cv::threshold(img, img, 240, 255, cv::ThresholdTypes::THRESH_BINARY);
 	//cv::imshow("binary", img);
 	//cv::Canny(img, edges, 100, 210);
 	//floodFill(edges, cv::Point2i(edges.cols / 2, edges.rows / 2), cv::Scalar(255, 255, 255));
@@ -1038,10 +1038,10 @@ bool GLMesh::Load2DImage(std::string fileName)
 		}
 	}
 
-	float epsilon = 0.005 * cv::arcLength(contours[contour_id], true);
+	const float EPSILON = 0.002 * cv::arcLength(contours[contour_id], true);
 
 	std::vector<cv::Point> approx;
-	cv::approxPolyDP(contours[contour_id], approx, epsilon, true);
+	cv::approxPolyDP(contours[contour_id], approx, EPSILON, true);
 
 	// find bounding box
 	int max_x = approx[0].x;
@@ -1464,11 +1464,11 @@ GLMesh::loadFrameControlPoint(int frame)
 		return;
 
 	if (this->frameData[frame].empty()) {
-		puts("this frame have no points");
+		//puts("this frame have no points");
 		return;
 	}
 	if (this->frameData[frame].size() != this->mesh.controlPoints.size()) {
-		puts("frame points != now points");
+		//puts("frame points != now points");
 		return;
 	}
 

@@ -86,10 +86,9 @@ void exportCB(Fl_Widget*, MyWindow* mw)
 
 void toggleWeightCB(Fl_Widget*, MyWindow* mw)
 {
-	//mw->myView->setWeightMode(mw->renderWeightButton->value());
-
-	if (!mw->renderWeightButton->value()) 
+	if (!mw->weightModeButton->value()) {
 		mw->myView->gl_mesh->applyTriangleWeights();
+	}
 
 	mw->damageMe();
 }

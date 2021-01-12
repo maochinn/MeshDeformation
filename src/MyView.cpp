@@ -98,7 +98,7 @@ int MyView::handle(int event)
 			return 1;
 		}
 
-	if (mw->renderWeightButton->value()) {
+	if (mw->weightModeButton->value()) {
 		switch (event) {
 		case FL_PUSH:
 			return 1;
@@ -274,24 +274,28 @@ void MyView::draw()
 	glUniformMatrix4fv(glGetUniformLocation(this->commom_shader->Program, "u_model"), 1, GL_FALSE, &model_matrix[0][0]);
 	glUniform3fv(glGetUniformLocation(this->commom_shader->Program, "u_color"), 1, &glm::vec3(1, 1, 1)[0]);
 	glUniform1i(glGetUniformLocation(this->commom_shader->Program, "u_texture"), 0);
-	this->gl_mesh->renderMesh();
+	if(this->mw->renderMeshButton->value())
+		this->gl_mesh->renderMesh();
 	
 	//unbind shader(switch to fixed pipeline)
 	glUseProgram(0);
 	glDisable(GL_DEPTH_TEST);
 
 	glColor4f(1.0f, 0, 0, 0.4f);
-	this->gl_mesh->renderSelectedMesh();
+	if(this->mw->weightModeButton->value())
+		this->gl_mesh->renderSelectedMesh();
 
 	glColor4f(.26f, .181f, .172f, 0.6f);
 	glLineWidth(1.38f);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	this->gl_mesh->renderMesh();
+	if(this->mw->renderWireframeButton->value())
+		this->gl_mesh->renderMesh();
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	glDisable(GL_BLEND);
 
-	this->gl_mesh->renderControlPoints();
+	if (this->mw->renderControlButton->value())
+		this->gl_mesh->renderControlPoints();
 }
 
 void MyView::resize(int x, int y, int w, int h)
@@ -312,14 +316,14 @@ void
 MyView::selectConstraint(int mx, int my)
 {
 	int PrimID = pick(mx, my);
-	if (PrimID > 0)
+	if (PrimID >= 0)
 		this->gl_mesh->addConstrainedTriangle(PrimID);
 }
 void 
 MyView::deselectConstraint(int mx, int my)
 {
 	int PrimID = pick(mx, my);
-	if (PrimID > 0)
+	if (PrimID >= 0)
 		this->gl_mesh->removeConstrainedTriangle(PrimID);
 }
 

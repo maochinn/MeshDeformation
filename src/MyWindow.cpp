@@ -62,12 +62,18 @@ MyWindow(const int x, const int y)
 		widgets = new Fl_Group(600, 5, 190, 590);
 		widgets->begin();
 
-		//renderMeshButton = new Fl_Button(605, pty, 60, 20, "Mesh");
-		//togglify(renderMeshButton, 1);
+		renderMeshButton = new Fl_Button(605, pty, 60, 20, "Mesh");
+		togglify(renderMeshButton, 1);
+		renderWireframeButton = new Fl_Button(670, pty, 60, 20, "Wireframe");
+		togglify(renderWireframeButton, 0);
+		renderControlButton = new Fl_Button(735, pty, 60, 20, "Control");
+		togglify(renderControlButton, 1);
 
-		renderWeightButton = new Fl_Button(730, pty, 65, 20, "Weight");
-		togglify(renderWeightButton, 0);
-		renderWeightButton->callback((Fl_Callback*)toggleWeightCB, this);
+		pty += 25;
+
+		weightModeButton = new Fl_Button(605, pty, 100, 20, "Weight Mode");
+		togglify(weightModeButton, 0);
+		weightModeButton->callback((Fl_Callback*)toggleWeightCB, this);
 
 		pty += 25;
 

@@ -77,7 +77,11 @@ public:
 
 	// utility buttons
 	Fl_Button* renderMeshButton;
-	Fl_Button* renderWeightButton;
+	Fl_Button* renderWireframeButton;
+	Fl_Button* renderControlButton;
+
+	// Mode
+	Fl_Button* weightModeButton;
 
 	// which viewpoint are we drawing from
 	Fl_Button* world_cam;
