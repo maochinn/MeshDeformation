@@ -204,14 +204,14 @@ void MyView::draw()
 	{
 		//initiailize VAO, VBO, Shader...
 
-		std::string common_lib = Shader::readCode("../MeshDeformation/src/shaders/common_lib.glsl");
-		std::string material_lib = Shader::readCode("../MeshDeformation/src/shaders/material_lib.glsl");
+		std::string common_lib = Shader::readCode(PROJECT_DIR "/src/shaders/common_lib.glsl");
+		std::string material_lib = Shader::readCode(PROJECT_DIR "/src/shaders/material_lib.glsl");
 
 		if (!this->commom_shader) {
 			this->commom_shader = new Shader(
-				common_lib + Shader::readCode("../MeshDeformation/src/shaders/simple.vert"),
+				common_lib + Shader::readCode(PROJECT_DIR "/src/shaders/simple.vert"),
 				std::string(), std::string(), std::string(),
-				Shader::readCode("../MeshDeformation/src/shaders/simple.frag"));
+				Shader::readCode(PROJECT_DIR "/src/shaders/simple.frag"));
 		}
 		if (!this->commom_matrices) {
 			this->commom_matrices = new UBO();
@@ -224,9 +224,9 @@ void MyView::draw()
 
 		if (!this->picking_shader) {
 			this->picking_shader = new Shader(
-				common_lib + Shader::readCode("../MeshDeformation/src/shaders/picking.vert"),
+				common_lib + Shader::readCode(PROJECT_DIR "/src/shaders/picking.vert"),
 				std::string(), std::string(), std::string(),
-				Shader::readCode("../MeshDeformation/src/shaders/picking.frag"));
+				Shader::readCode(PROJECT_DIR "/src/shaders/picking.frag"));
 
 			this->picking_tex = new PickingTexture();
 			this->picking_tex->Init(w(), h());

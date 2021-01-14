@@ -45,7 +45,7 @@ void damageCB(Fl_Widget*, MyWindow* mw)
 void importPresetCB(Fl_Widget*, MyWindow* mw)
 {
 	const char* fname =
-		fl_file_chooser("Pick control point preset", "*.{preset}", "../MeshDeformation/Models/data/presets/");
+		fl_file_chooser("Pick control point preset", "*.{preset}", PROJECT_DIR "/Models/data/presets/");
 
 	if (fname) {
 		mw->myView->gl_mesh->importPreset(fname);
@@ -55,7 +55,7 @@ void importPresetCB(Fl_Widget*, MyWindow* mw)
 void exportPresetCB(Fl_Widget*, MyWindow* mw)
 {
 	const char* fname =
-		fl_file_chooser("Pick control point preset", "*.{preset}", "../MeshDeformation/Models/data/presets/output.preset");
+		fl_file_chooser("Pick control point preset", "*.{preset}", PROJECT_DIR "/Models/data/presets/output.preset");
 
 	if (fname) {
 		mw->myView->gl_mesh->exportPreset(fname);
@@ -65,7 +65,7 @@ void exportPresetCB(Fl_Widget*, MyWindow* mw)
 void importCB(Fl_Widget*, MyWindow* mw)
 {
 	const char* fname =
-		fl_file_chooser("Pick input file", "*.{txt,bmp,jpg,png,obj}", "../MeshDeformation/Models/data/");
+		fl_file_chooser("Pick input file", "*.{txt,bmp,jpg,png,obj}", PROJECT_DIR "/Models/data/");
 	if (fname) {
 		mw->myView->gl_mesh->Init(fname);
 		mw->damageMe();
@@ -76,7 +76,7 @@ void importCB(Fl_Widget*, MyWindow* mw)
 void exportCB(Fl_Widget*, MyWindow* mw)
 {
 	const char* fname =
-		fl_file_chooser("Pick output file", "*.{obj}", "../MeshDeformation/Models/data/output.obj");
+		fl_file_chooser("Pick output file", "*.{obj}", PROJECT_DIR "/Models/data/output.obj");
 
 	if (fname) {
 		mw->myView->gl_mesh->exportMesh(fname);

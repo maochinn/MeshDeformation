@@ -30,6 +30,7 @@ include_directories(${INCLUDE_DIR}OpenMesh/)
 
 add_Definitions("-D_XKEYCHECK_H")
 add_Definitions("-D_USE_MATH_DEFINES")
+add_definitions(-DPROJECT_DIR="${PROJECT_SOURCE_DIR}")
 
 add_executable(MeshDeformation
     ${SRC_DIR}CallBack.h
